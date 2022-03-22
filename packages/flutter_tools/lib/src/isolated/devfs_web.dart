@@ -7,6 +7,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:dds/devtools_server.dart';
 import 'package:dwds/data/build_result.dart';
 import 'package:dwds/dwds.dart';
 import 'package:html/dom.dart';
@@ -37,6 +38,7 @@ import '../dart/package_map.dart';
 import '../devfs.dart';
 import '../globals.dart' as globals;
 import '../project.dart';
+import '../resident_devtools_handler.dart';
 import '../vmservice.dart';
 import '../web/bootstrap.dart';
 import '../web/chrome.dart';
@@ -77,7 +79,8 @@ const String _kDefaultIndex = '''
 ///
 /// This is only used in development mode.
 class WebExpressionCompiler implements ExpressionCompiler {
-  WebExpressionCompiler(this._generator, {
+  WebExpressionCompiler(
+    this._generator, {
     @required FileSystem fileSystem,
   }) : _fileSystem = fileSystem;
 
@@ -107,15 +110,15 @@ class WebExpressionCompiler implements ExpressionCompiler {
     }
 
     return ExpressionCompilationResult(
-        "InternalError: frontend server failed to compile '$expression'",
-        true);
+        "InternalError: frontend server failed to compile '$expression'", true);
   }
 
   @override
   Future<void> initialize({String moduleFormat, bool soundNullSafety}) async {}
 
   @override
-  Future<bool> updateDependencies(Map<String, ModuleInfo> modules) async => true;
+  Future<bool> updateDependencies(Map<String, ModuleInfo> modules) async =>
+      true;
 }
 
 /// A web server which handles serving JavaScript and assets.
@@ -164,7 +167,8 @@ class WebAssetServer implements AssetReader {
     File sourcemapFile,
     File metadataFile,
   ) {
-    return _webMemoryFS.write(codeFile, manifestFile, sourcemapFile, metadataFile);
+    return _webMemoryFS.write(
+        codeFile, manifestFile, sourcemapFile, metadataFile);
   }
 
   /// Start the web asset server on a [hostname] and [port].
@@ -187,7 +191,8 @@ class WebAssetServer implements AssetReader {
     bool enableDds,
     Uri entrypoint,
     ExpressionCompiler expressionCompiler,
-    NullSafetyMode nullSafetyMode, {
+    NullSafetyMode nullSafetyMode,
+    ResidentDevtoolsHandler devtoolsHandler, {
     bool testMode = false,
     DwdsLauncher dwdsLauncher = Dwds.start,
   }) async {
@@ -201,11 +206,13 @@ class WebAssetServer implements AssetReader {
     const int kMaxRetries = 4;
     for (int i = 0; i <= kMaxRetries; i++) {
       try {
-        httpServer = await HttpServer.bind(address, port ?? await globals.os.findFreePort());
+        httpServer = await HttpServer.bind(
+            address, port ?? await globals.os.findFreePort());
         break;
       } on SocketException catch (e, s) {
         if (i >= kMaxRetries) {
-          globals.printError('Failed to bind web development server:\n$e', stackTrace: s);
+          globals.printError('Failed to bind web development server:\n$e',
+              stackTrace: s);
           throwToolExit('Failed to bind web development server:\n$e');
         }
         await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -243,7 +250,8 @@ class WebAssetServer implements AssetReader {
       runZonedGuarded(() {
         shelf.serveRequests(httpServer, releaseAssetServer.handle);
       }, (Object e, StackTrace s) {
-        globals.printTrace('Release asset server: error serving requests: $e:$s');
+        globals
+            .printTrace('Release asset server: error serving requests: $e:$s');
       });
       return server;
     }
@@ -256,7 +264,8 @@ class WebAssetServer implements AssetReader {
     // load the through the isolate APIs.
     final Directory directory =
         await _loadDwdsDirectory(globals.fs, globals.logger);
-    shelf.Handler middleware(FutureOr<shelf.Response> Function(shelf.Request) innerHandler) {
+    shelf.Handler middleware(
+        FutureOr<shelf.Response> Function(shelf.Request) innerHandler) {
       return (shelf.Request request) async {
         if (request.url.path.endsWith('dwds/src/injected/client.js')) {
           final Uri uri = directory.uri.resolve('src/injected/client.js');
@@ -278,9 +287,26 @@ class WebAssetServer implements AssetReader {
       assetReader: server,
       enableDebugExtension: true,
       buildResults: const Stream<BuildResult>.empty(),
+      // devtoolsLauncher: (String hostname) async {
+      //   final activeServer = devtoolsHandler.activeDevToolsServer;
+      //   print('IS THERE ALREADY AN ACTIVE DEVTOOLS SERVER? $activeServer');
+
+      //   final HttpServer server = await DevToolsServer().serveDevTools(
+      //     hostname: hostname,
+      //     port: 36777,
+      //     // handler: devtoolsHandler,
+      //   );
+      //   return DevTools(server.address.host, server.port, server);
+      // },
       chromeConnection: () async {
-        final Chromium chromium = await chromiumLauncher.connectedInstance;
-        return chromium.chromeConnection;
+        print('IN CHROME CONNECTION');
+        if (chromiumLauncher == null) {
+          throw StateError('Not connected to Chrome');
+        } else {
+          print('calling connected instance on chromium in debfs web');
+          final Chromium chromium = await chromiumLauncher.connectedInstance;
+          return chromium.chromeConnection;
+        }
       },
       hostname: hostname,
       urlEncoder: urlTunneller,
@@ -301,8 +327,7 @@ class WebAssetServer implements AssetReader {
       pipeline = pipeline.addMiddleware(middleware);
       pipeline = pipeline.addMiddleware(dwds.middleware);
     }
-    final shelf.Handler dwdsHandler =
-        pipeline.addHandler(server.handleRequest);
+    final shelf.Handler dwdsHandler = pipeline.addHandler(server.handleRequest);
     final shelf.Cascade cascade =
         shelf.Cascade().add(dwds.handler).add(dwdsHandler);
     runZonedGuarded(() {
@@ -317,7 +342,6 @@ class WebAssetServer implements AssetReader {
   final NullSafetyMode _nullSafetyMode;
   final HttpServer _httpServer;
   final WebMemoryFS _webMemoryFS = WebMemoryFS();
-
 
   final PackageConfig _packages;
   final InternetAddress internetAddress;
@@ -372,7 +396,8 @@ class WebAssetServer implements AssetReader {
     // Attempt to look up the file by URI.
     final String webServerPath =
         requestPath.replaceFirst('.dart.js', '.dart.lib.js');
-    if (_webMemoryFS.files.containsKey(requestPath) || _webMemoryFS.files.containsKey(webServerPath)) {
+    if (_webMemoryFS.files.containsKey(requestPath) ||
+        _webMemoryFS.files.containsKey(webServerPath)) {
       final List<int> bytes = getFile(requestPath) ?? getFile(webServerPath);
       // Use the underlying buffer hashCode as a revision string. This buffer is
       // replaced whenever the frontend_server produces new output files, which
@@ -456,9 +481,11 @@ class WebAssetServer implements AssetReader {
     // browsers will refuse to render images/show video etc. If the tool
     // cannot determine a mime type, fall back to application/octet-stream.
     final String mimeType = mime.lookupMimeType(
-        file.path,
-        headerBytes: await file.openRead(0, mime.defaultMagicNumbersMaxLength).first,
-    ) ?? _kDefaultMimeType;
+          file.path,
+          headerBytes:
+              await file.openRead(0, mime.defaultMagicNumbersMaxLength).first,
+        ) ??
+        _kDefaultMimeType;
 
     headers[HttpHeaders.contentLengthHeader] = length.toString();
     headers[HttpHeaders.contentTypeHeader] = mimeType;
@@ -493,12 +520,14 @@ class WebAssetServer implements AssetReader {
         .childFile('index.html');
 
     if (indexFile.existsSync()) {
-      String indexFileContent =  indexFile.readAsStringSync();
+      String indexFileContent = indexFile.readAsStringSync();
       if (indexFileContent.contains(kBaseHrefPlaceholder)) {
-          indexFileContent =  indexFileContent.replaceAll(kBaseHrefPlaceholder, '/');
-          headers[HttpHeaders.contentLengthHeader] = indexFileContent.length.toString();
-          return shelf.Response.ok(indexFileContent,headers: headers);
-        }
+        indexFileContent =
+            indexFileContent.replaceAll(kBaseHrefPlaceholder, '/');
+        headers[HttpHeaders.contentLengthHeader] =
+            indexFileContent.length.toString();
+        return shelf.Response.ok(indexFileContent, headers: headers);
+      }
       headers[HttpHeaders.contentLengthHeader] =
           indexFile.lengthSync().toString();
       return shelf.Response.ok(indexFile.openRead(), headers: headers);
@@ -559,22 +588,18 @@ class WebAssetServer implements AssetReader {
       return dartSdkFile;
     }
 
-    final Directory flutterWebSdk = globals.fs
-        .directory(globals.artifacts.getHostArtifact(HostArtifact.flutterWebSdk));
+    final Directory flutterWebSdk = globals.fs.directory(
+        globals.artifacts.getHostArtifact(HostArtifact.flutterWebSdk));
     final File webSdkFile = globals.fs.file(flutterWebSdk.uri.resolve(path));
 
     return webSdkFile;
   }
 
-  File get _resolveDartSdkJsFile =>
-      globals.fs.file(globals.artifacts.getHostArtifact(
-          kDartSdkJsArtifactMap[webRenderer][_nullSafetyMode]
-      ));
+  File get _resolveDartSdkJsFile => globals.fs.file(globals.artifacts
+      .getHostArtifact(kDartSdkJsArtifactMap[webRenderer][_nullSafetyMode]));
 
-  File get _resolveDartSdkJsMapFile =>
-    globals.fs.file(globals.artifacts.getHostArtifact(
-        kDartSdkJsMapArtifactMap[webRenderer][_nullSafetyMode]
-    ));
+  File get _resolveDartSdkJsMapFile => globals.fs.file(globals.artifacts
+      .getHostArtifact(kDartSdkJsMapArtifactMap[webRenderer][_nullSafetyMode]));
 
   @override
   Future<String> dartSourceContents(String serverPath) async {
@@ -639,6 +664,7 @@ class WebDevFS implements DevFS {
     @required this.nullAssertions,
     @required this.nativeNullAssertions,
     @required this.nullSafetyMode,
+    @required this.devtoolsHandler,
     this.testMode = false,
   }) : _port = port;
 
@@ -659,6 +685,7 @@ class WebDevFS implements DevFS {
   final bool nativeNullAssertions;
   final int _port;
   final NullSafetyMode nullSafetyMode;
+  final ResidentDevtoolsHandler devtoolsHandler;
 
   WebAssetServer webAssetServer;
 
@@ -680,6 +707,7 @@ class WebDevFS implements DevFS {
     _connectedApps =
         dwds.connectedApps.listen((AppConnection appConnection) async {
       try {
+        print('USE DEBUG EXTENSION? $useDebugExtension');
         final DebugConnection debugConnection = useDebugExtension
             ? await (_cachedExtensionFuture ??=
                 dwds.extensionDebugConnections.stream.first)
@@ -691,8 +719,8 @@ class WebDevFS implements DevFS {
             Uri.parse(debugConnection.uri),
             logger: globals.logger,
           );
-          firstConnection
-              .complete(ConnectionResult(appConnection, debugConnection, vmService));
+          firstConnection.complete(
+              ConnectionResult(appConnection, debugConnection, vmService));
         }
       } on Exception catch (error, stackTrace) {
         if (!firstConnection.isCompleted) {
@@ -742,6 +770,7 @@ class WebDevFS implements DevFS {
       entrypoint,
       expressionCompiler,
       nullSafetyMode,
+      devtoolsHandler,
       testMode: testMode,
     );
     final int selectedPort = webAssetServer.selectedPort;
@@ -871,12 +900,18 @@ class WebDevFS implements DevFS {
     File metadataFile;
     List<String> modules;
     try {
-      final Directory parentDirectory = globals.fs.directory(outputDirectoryPath);
-      codeFile = parentDirectory.childFile('${compilerOutput.outputFilename}.sources');
-      manifestFile = parentDirectory.childFile('${compilerOutput.outputFilename}.json');
-      sourcemapFile = parentDirectory.childFile('${compilerOutput.outputFilename}.map');
-      metadataFile = parentDirectory.childFile('${compilerOutput.outputFilename}.metadata');
-      modules = webAssetServer._webMemoryFS.write(codeFile, manifestFile, sourcemapFile, metadataFile);
+      final Directory parentDirectory =
+          globals.fs.directory(outputDirectoryPath);
+      codeFile =
+          parentDirectory.childFile('${compilerOutput.outputFilename}.sources');
+      manifestFile =
+          parentDirectory.childFile('${compilerOutput.outputFilename}.json');
+      sourcemapFile =
+          parentDirectory.childFile('${compilerOutput.outputFilename}.map');
+      metadataFile = parentDirectory
+          .childFile('${compilerOutput.outputFilename}.metadata');
+      modules = webAssetServer._webMemoryFS
+          .write(codeFile, manifestFile, sourcemapFile, metadataFile);
     } on FileSystemException catch (err) {
       throwToolExit('Failed to load recompiled sources:\n$err');
     }
@@ -1000,12 +1035,13 @@ class ReleaseAssetServer {
 }
 
 void _log(logging.LogRecord event) {
-  final String error = event.error == null? '': 'Error: ${event.error}';
+  final String error = event.error == null ? '' : 'Error: ${event.error}';
   if (event.level >= logging.Level.SEVERE) {
-    globals.printError('${event.loggerName}: ${event.message}$error', stackTrace: event.stackTrace);
+    globals.printError('${event.loggerName}: ${event.message}$error',
+        stackTrace: event.stackTrace);
   } else if (event.level == logging.Level.WARNING) {
     globals.printWarning('${event.loggerName}: ${event.message}$error');
-  } else  {
+  } else {
     globals.printTrace('${event.loggerName}: ${event.message}$error');
   }
 }
@@ -1014,8 +1050,8 @@ Future<Directory> _loadDwdsDirectory(
     FileSystem fileSystem, Logger logger) async {
   final String toolPackagePath =
       fileSystem.path.join(Cache.flutterRoot, 'packages', 'flutter_tools');
-  final String packageFilePath =
-      fileSystem.path.join(toolPackagePath, '.dart_tool', 'package_config.json');
+  final String packageFilePath = fileSystem.path
+      .join(toolPackagePath, '.dart_tool', 'package_config.json');
   final PackageConfig packageConfig = await loadPackageConfigWithLogging(
     fileSystem.file(packageFilePath),
     logger: logger,
