@@ -279,8 +279,11 @@ class WebAssetServer implements AssetReader {
       enableDebugExtension: true,
       buildResults: const Stream<BuildResult>.empty(),
       chromeConnection: () async {
-        final Chromium chromium = await chromiumLauncher.connectedInstance;
-        return chromium.chromeConnection;
+        if (chromiumLauncher != null) {
+          final Chromium chromium = await chromiumLauncher.connectedInstance;
+          return chromium.chromeConnection;
+        }
+        throw StateError('Not connected to Chrome');
       },
       hostname: hostname,
       urlEncoder: urlTunneller,
