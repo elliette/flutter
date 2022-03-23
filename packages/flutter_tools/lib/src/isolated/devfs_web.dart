@@ -262,7 +262,10 @@ class WebAssetServer implements AssetReader {
         await _loadDwdsDirectory(globals.fs, globals.logger);
     shelf.Handler middleware(FutureOr<shelf.Response> Function(shelf.Request) innerHandler) {
       return (shelf.Request request) async {
-        if (request.url.path.endsWith('dwds/src/injected/client.js')) {
+        final shelf.Request req = request.change(headers: <String, String>{
+            'origin-agent-cluster': '?!',
+          });
+        if (req.url.path.endsWith('dwds/src/injected/client.js')) {
           final Uri uri = directory.uri.resolve('src/injected/client.js');
           final String result =
               await globals.fs.file(uri.toFilePath()).readAsString();
@@ -270,7 +273,7 @@ class WebAssetServer implements AssetReader {
             HttpHeaders.contentTypeHeader: 'application/javascript'
           });
         }
-        return innerHandler(request);
+        return innerHandler(req);
       };
     }
 
@@ -290,7 +293,9 @@ class WebAssetServer implements AssetReader {
         final HttpServer server = await DevToolsServer().serveDevTools(
           hostname: hostname,
           port: 36777,
-          customDevToolsPath: globals.cache.devToolsPath);
+          customDevToolsPath: globals.cache.devToolsPath,
+          allowEmbedding: true,
+        );
         return DevTools(server.address.host, server.port, server);
       },
       hostname: hostname,
