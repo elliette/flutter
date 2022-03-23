@@ -38,6 +38,8 @@ import '../dart/package_map.dart';
 import '../devfs.dart';
 import '../globals.dart' as globals;
 import '../project.dart';
+import '../resident_devtools_handler.dart';
+import '../resident_runner.dart' as ResidentRunner;
 import '../vmservice.dart';
 import '../web/bootstrap.dart';
 import '../web/chrome.dart';
@@ -188,7 +190,8 @@ class WebAssetServer implements AssetReader {
     bool enableDds,
     Uri entrypoint,
     ExpressionCompiler expressionCompiler,
-    NullSafetyMode nullSafetyMode, {
+    NullSafetyMode nullSafetyMode, 
+    ResidentDevtoolsHandler devtoolsHandler, {
     bool testMode = false,
     DwdsLauncher dwdsLauncher = Dwds.start,
   }) async {
@@ -287,7 +290,14 @@ class WebAssetServer implements AssetReader {
         throw StateError('Not connected to Chrome');
       },
       devtoolsLauncher: (String hostname) async {
-        // TODO: Implement.
+        final dartSdk = globals.artifacts.getHostArtifact(HostArtifact.engineDartSdkPath).path;
+        // Is the call to serve necessary?
+        final address = await ResidentRunner.DevtoolsLauncher.instance.serve();
+        final server = await DevToolsServer().serveDevTools(
+          hostname: hostname,
+          port: 36777,
+          customDevToolsPath: '$dartSdk/bin/resources/devtools');
+        return DevTools(server.address.host, server.port, server);
       },
       hostname: hostname,
       urlEncoder: urlTunneller,
@@ -646,6 +656,7 @@ class WebDevFS implements DevFS {
     @required this.nullAssertions,
     @required this.nativeNullAssertions,
     @required this.nullSafetyMode,
+    @required this.devtoolsHandler,
     this.testMode = false,
   }) : _port = port;
 
@@ -666,6 +677,7 @@ class WebDevFS implements DevFS {
   final bool nativeNullAssertions;
   final int _port;
   final NullSafetyMode nullSafetyMode;
+  final ResidentDevtoolsHandler devtoolsHandler;
 
   WebAssetServer webAssetServer;
 
@@ -759,6 +771,7 @@ class WebDevFS implements DevFS {
       entrypoint,
       expressionCompiler,
       nullSafetyMode,
+      devtoolsHandler,
       testMode: testMode,
     );
     final int selectedPort = webAssetServer.selectedPort;
