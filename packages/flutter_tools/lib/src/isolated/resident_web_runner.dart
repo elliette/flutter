@@ -165,9 +165,13 @@ class ResidentWebRunner extends ResidentRunner {
       return _instance;
     }
     final vmservice.VmService service =_connectionResult?.vmService;
-    final Uri websocketUri = Uri.parse(_connectionResult.debugConnection.uri);
-    final Uri httpUri = _httpUriFromWebsocketUri(websocketUri);
-    return _instance ??= FlutterVmService(service, wsAddress: websocketUri, httpAddress: httpUri);
+    if (_connectionResult.debugConnection != null) {
+      final Uri websocketUri = Uri.parse(_connectionResult.debugConnection.uri);
+      final Uri httpUri = _httpUriFromWebsocketUri(websocketUri);
+      return _instance ??= FlutterVmService(service, wsAddress: websocketUri, httpAddress: httpUri);
+    } else {
+      return _instance ??= FlutterVmService(service);
+    }
   }
   FlutterVmService _instance;
 
@@ -556,10 +560,11 @@ class ResidentWebRunner extends ResidentRunner {
     Uri websocketUri;
     if (supportsServiceProtocol) {
       final WebDevFS webDevFS = device.devFS as WebDevFS;
-      final bool useDebugExtension = device.device is WebServerDevice && debuggingOptions.startPaused;
-      _connectionResult = await webDevFS.connect(useDebugExtension);
+      final bool useDebugExtension = device.device is WebServerDevice;
+      _connectionResult = await webDevFS.connect(useDebugExtension, waitForDebugConnection: false);
+      if (_connectionResult.debugConnection != null) {
       unawaited(_connectionResult.debugConnection.onDone.whenComplete(_cleanupAndExit));
-
+      }
       void onLogEvent(vmservice.Event event)  {
         final String message = processVmServiceMessage(event);
         _logger.printStatus(message);
@@ -601,7 +606,9 @@ class ResidentWebRunner extends ResidentRunner {
       );
 
 
-      websocketUri = Uri.parse(_connectionResult.debugConnection.uri);
+      if (_connectionResult.debugConnection != null) {
+        websocketUri = Uri.parse(_connectionResult.debugConnection.uri);
+      }
       device.vmService = _vmService;
 
       // Run main immediately if the app is not started paused or if there

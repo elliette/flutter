@@ -7,6 +7,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:dds/devtools_server.dart';
 import 'package:dwds/data/build_result.dart';
 import 'package:dwds/dwds.dart';
 import 'package:html/dom.dart';
@@ -284,6 +285,9 @@ class WebAssetServer implements AssetReader {
           return chromium.chromeConnection;
         }
         throw StateError('Not connected to Chrome');
+      },
+      devtoolsLauncher: (String hostname) async {
+        // TODO: Implement.
       },
       hostname: hostname,
       urlEncoder: urlTunneller,
@@ -677,17 +681,27 @@ class WebDevFS implements DevFS {
   /// Connect and retrieve the [DebugConnection] for the current application.
   ///
   /// Only calls [AppConnection.runMain] on the subsequent connections.
-  Future<ConnectionResult> connect(bool useDebugExtension) {
+  /// Note: Added waitForDebugConnection to be used when we are relying on the 
+  /// debug extension for debugging.  Otherwise, we will only run the Flutter
+  /// app's main AFTER a user has hit the Dart Debug Extension (and therefore
+  /// start a debug connection).
+  Future<ConnectionResult> connect(bool useDebugExtension, {
+    bool waitForDebugConnection = true
+  }) {
     final Completer<ConnectionResult> firstConnection =
         Completer<ConnectionResult>();
     _connectedApps =
         dwds.connectedApps.listen((AppConnection appConnection) async {
       try {
-        final DebugConnection debugConnection = useDebugExtension
-            ? await (_cachedExtensionFuture ??=
+        final Future<DebugConnection> futureDebugConnection = useDebugExtension
+            ? (_cachedExtensionFuture ??=
                 dwds.extensionDebugConnections.stream.first)
-            : await dwds.debugConnection(appConnection);
-        if (firstConnection.isCompleted) {
+            :  dwds.debugConnection(appConnection);
+        DebugConnection debugConnection;
+        if (waitForDebugConnection) {
+          debugConnection = await futureDebugConnection;
+        }
+        if (firstConnection.isCompleted || !waitForDebugConnection) {
           appConnection.runMain();
         } else {
           final vm_service.VmService vmService = await createVmServiceDelegate(
