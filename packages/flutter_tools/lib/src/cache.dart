@@ -380,14 +380,18 @@ class Cache {
     }
   }
 
+  String get devToolsPath {
+    const String devToolsDirPath = 'dart-sdk/bin/resources/devtools';
+    final Directory devToolsDir = getCacheDir(devToolsDirPath, shouldCreate: false);
+    if (!devToolsDir.existsSync()) {
+      throw Exception('Could not find directory at ${devToolsDir.path}');
+    }
+    return devToolsDir.path;
+  }
+
   String get devToolsVersion {
     if (_devToolsVersion == null) {
-      const String devToolsDirPath = 'dart-sdk/bin/resources/devtools';
-      final Directory devToolsDir = getCacheDir(devToolsDirPath, shouldCreate: false);
-      if (!devToolsDir.existsSync()) {
-        throw Exception('Could not find directory at ${devToolsDir.path}');
-      }
-      final String versionFilePath = '${devToolsDir.path}/version.json';
+      final String versionFilePath = '$devToolsPath/version.json';
       final File versionFile = _fileSystem.file(versionFilePath);
       if (!versionFile.existsSync()) {
         throw Exception('Could not find file at $versionFilePath');

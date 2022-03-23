@@ -283,20 +283,14 @@ class WebAssetServer implements AssetReader {
       enableDebugExtension: true,
       buildResults: const Stream<BuildResult>.empty(),
       chromeConnection: () async {
-        if (chromiumLauncher != null) {
-          final Chromium chromium = await chromiumLauncher.connectedInstance;
-          return chromium.chromeConnection;
-        }
-        throw StateError('Not connected to Chrome');
+        final Chromium chromium = await chromiumLauncher.connectedInstance;
+        return chromium.chromeConnection;
       },
       devtoolsLauncher: (String hostname) async {
-        final dartSdk = globals.artifacts.getHostArtifact(HostArtifact.engineDartSdkPath).path;
-        // Is the call to serve necessary?
-        final address = await ResidentRunner.DevtoolsLauncher.instance.serve();
-        final server = await DevToolsServer().serveDevTools(
+        final HttpServer server = await DevToolsServer().serveDevTools(
           hostname: hostname,
           port: 36777,
-          customDevToolsPath: '$dartSdk/bin/resources/devtools');
+          customDevToolsPath: globals.cache.devToolsPath);
         return DevTools(server.address.host, server.port, server);
       },
       hostname: hostname,
