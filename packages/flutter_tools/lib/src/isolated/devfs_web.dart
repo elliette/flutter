@@ -295,6 +295,7 @@ class WebAssetServer implements AssetReader {
           port: 36777,
           customDevToolsPath: globals.cache.devToolsPath,
           allowEmbedding: true,
+          enableStdinCommands: false,
         );
         return DevTools(server.address.host, server.port, server);
       },
