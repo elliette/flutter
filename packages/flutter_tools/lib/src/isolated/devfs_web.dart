@@ -296,6 +296,7 @@ class WebAssetServer implements AssetReader {
       loadStrategy: FrontendServerRequireStrategyProvider(
         ReloadConfiguration.none,
         server,
+        PackageUriMapper(packageConfig),
         digestProvider,
         server.basePath!,
       ).strategy,
