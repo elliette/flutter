@@ -278,6 +278,7 @@ class ResidentWebRunner extends ResidentRunner {
           nullSafetyMode: debuggingOptions.buildInfo.nullSafetyMode,
           nativeNullAssertions: debuggingOptions.nativeNullAssertions,
         );
+
         final Uri url = await device!.devFS!.create();
         if (debuggingOptions.buildInfo.isDebug) {
           await runSourceGenerators();
@@ -437,6 +438,7 @@ class ResidentWebRunner extends ResidentRunner {
       Uri? importedEntrypoint = packageConfig!.toPackageUri(mainUri);
       // Special handling for entrypoints that are not under lib, such as test scripts.
       if (importedEntrypoint == null) {
+        print('==== MAIN URI HERE: $mainUri');
         final String parent = _fileSystem.file(mainUri).parent.path;
         flutterDevices.first.generator!
           ..addFileSystemRoot(parent)
@@ -485,6 +487,7 @@ class ResidentWebRunner extends ResidentRunner {
     final Status devFSStatus = _logger.startProgress(
       'Waiting for connection from debug service on ${device!.device!.name}...',
     );
+    print('!!!!!!!!!!!!! MAIN HERE IS $mainPath');
     final UpdateFSReport report = await device!.devFS!.update(
       mainUri: await _generateEntrypoint(
         _fileSystem.file(mainPath).absolute.uri,

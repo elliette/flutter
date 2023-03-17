@@ -17,6 +17,8 @@ String generateBootstrapScript({
   required String requireUrl,
   required String mapperUrl,
 }) {
+  print('REQUIRE URL: $requireUrl');
+  print('MAPPER URL: $mapperUrl');
   return '''
 "use strict";
 
@@ -157,6 +159,7 @@ String generateMainModule({
   required bool nativeNullAssertions,
   String bootstrapModule = 'main_module.bootstrap',
 }) {
+  print('ENTRYPOINT: $entrypoint');
   // The typo below in "EXTENTION" is load-bearing, package:build depends on it.
   return '''
 /* ENTRYPOINT_EXTENTION_MARKER */

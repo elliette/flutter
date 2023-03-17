@@ -276,6 +276,8 @@ class WebAssetServer implements AssetReader {
     logging.Logger.root.onRecord.listen(log);
 
     // In debug builds, spin up DWDS and the full asset server.
+    print(':) $entrypoint');
+    // print(':) $packagesFilePath');
     final Dwds dwds = await dwdsLauncher(
       assetReader: server,
       enableDebugExtension: true,
@@ -653,6 +655,7 @@ class WebDevFS implements DevFS {
     required this.nullAssertions,
     required this.nativeNullAssertions,
     required this.nullSafetyMode,
+    this.mainPath = '',
     this.testMode = false,
   }) : _port = port;
 
@@ -677,6 +680,8 @@ class WebDevFS implements DevFS {
   late WebAssetServer webAssetServer;
 
   Dwds get dwds => webAssetServer.dwds;
+
+  String? mainPath;
 
   // A flag to indicate whether we have called `setAssetDirectory` on the target device.
   @override
@@ -823,6 +828,7 @@ class WebDevFS implements DevFS {
     String? projectRootPath,
     File? dartPluginRegistrant,
   }) async {
+    print('==== MAIN URI IS $mainUri');
     lastPackageConfig = packageConfig;
     final File mainFile = globals.fs.file(mainUri);
     final String outputDirectoryPath = mainFile.parent.path;
@@ -832,6 +838,7 @@ class WebDevFS implements DevFS {
           globals.fs.directory(outputDirectoryPath);
       generator.addFileSystemRoot(outputDirectoryPath);
       final String entrypoint = globals.fs.path.basename(mainFile.path);
+      print('!+!+!+ AND ENTRYPOINT HERE $entrypoint');
       webAssetServer.writeBytes(entrypoint, mainFile.readAsBytesSync());
       webAssetServer.writeBytes('require.js', requireJS.readAsBytesSync());
       webAssetServer.writeBytes(
