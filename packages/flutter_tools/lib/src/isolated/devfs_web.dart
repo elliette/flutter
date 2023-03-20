@@ -63,6 +63,7 @@ typedef DwdsLauncher = Future<Dwds> Function({
   bool emitDebugEvents,
   bool isInternalBuild,
   Future<bool> Function()? isFlutterApp,
+  String? entrypointPath,
 });
 
 // A minimal index for projects that do not yet support web.
@@ -276,7 +277,8 @@ class WebAssetServer implements AssetReader {
     logging.Logger.root.onRecord.listen(log);
 
     // In debug builds, spin up DWDS and the full asset server.
-    print(':) $entrypoint');
+    print(':) web app entrypoint  $entrypoint');
+    print('URI: ${globals.fs.file(entrypoint).absolute.path}');
     // print(':) $packagesFilePath');
     final Dwds dwds = await dwdsLauncher(
       assetReader: server,
@@ -301,6 +303,7 @@ class WebAssetServer implements AssetReader {
       ).strategy,
       expressionCompiler: expressionCompiler,
       spawnDds: enableDds,
+      entrypointPath: globals.fs.file(entrypoint).absolute.path,
     );
     shelf.Pipeline pipeline = const shelf.Pipeline();
     if (enableDwds) {
