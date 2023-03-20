@@ -277,9 +277,6 @@ class WebAssetServer implements AssetReader {
     logging.Logger.root.onRecord.listen(log);
 
     // In debug builds, spin up DWDS and the full asset server.
-    print(':) web app entrypoint  $entrypoint');
-    print('URI: ${globals.fs.file(entrypoint).absolute.path}');
-    // print(':) $packagesFilePath');
     final Dwds dwds = await dwdsLauncher(
       assetReader: server,
       enableDebugExtension: true,
@@ -303,7 +300,7 @@ class WebAssetServer implements AssetReader {
       ).strategy,
       expressionCompiler: expressionCompiler,
       spawnDds: enableDds,
-      entrypointPath: globals.fs.file(entrypoint).absolute.path,
+      entrypointPath: entrypoint.path,
     );
     shelf.Pipeline pipeline = const shelf.Pipeline();
     if (enableDwds) {
