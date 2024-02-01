@@ -1881,7 +1881,7 @@ mixin WidgetInspectorService {
       return <Object>[];
     }
 
-    final InspectorSerializationDelegate delegate = InspectorSerializationDelegate(groupName: groupName, summaryTree: true, service: this);
+    final InspectorSerializationDelegate delegate = InspectorSerializationDelegate(groupName: groupName, service: this);
     return _nodesToJson(_getChildrenFiltered(node, delegate), delegate, parent: node);
   }
 
@@ -1931,10 +1931,7 @@ mixin WidgetInspectorService {
   ) {
     final List<DiagnosticsNode> children = <DiagnosticsNode>[
       for (final DiagnosticsNode child in nodes)
-        if (!delegate.summaryTree || _shouldShowInSummaryTree(child))
-          child
-        else
-          ..._getChildrenFiltered(child, delegate),
+        child
     ];
     return children;
   }
@@ -1964,7 +1961,6 @@ mixin WidgetInspectorService {
       InspectorSerializationDelegate(
         groupName: groupName,
         subtreeDepth: 1000000,
-        summaryTree: true,
         service: this,
         addAdditionalPropertiesCallback: addAdditionalPropertiesCallback,
       ),
@@ -2131,7 +2127,6 @@ mixin WidgetInspectorService {
       root,
       InspectorSerializationDelegate(
         groupName: groupName,
-        summaryTree: true,
         subtreeDepth: subtreeDepth,
         service: this,
         addAdditionalPropertiesCallback:
@@ -3665,7 +3660,6 @@ class InspectorSerializationDelegate implements DiagnosticsSerializationDelegate
   /// for Flutter Inspector service.
   InspectorSerializationDelegate({
     this.groupName,
-    this.summaryTree = false,
     this.maxDescendantsTruncatableNode = -1,
     this.expandPropertyValues = true,
     this.subtreeDepth = 1,
@@ -3683,9 +3677,6 @@ class InspectorSerializationDelegate implements DiagnosticsSerializationDelegate
   /// Object ids returned as part of the json will remain live at least until
   /// [WidgetInspectorService.disposeGroup()] is called on [groupName].
   final String? groupName;
-
-  /// Whether the tree should only include nodes created by the local project.
-  final bool summaryTree;
 
   /// Maximum descendants of [DiagnosticsNode] before truncating.
   final int maxDescendantsTruncatableNode;
@@ -3717,7 +3708,7 @@ class InspectorSerializationDelegate implements DiagnosticsSerializationDelegate
     if (_interactive) {
       result['valueId'] = service.toId(value, groupName!);
     }
-    if (summaryTree) {
+    if (service._shouldShowInSummaryTree(node)) {
       result['summaryTree'] = true;
     }
     final _Location? creationLocation = _getCreationLocation(value);
@@ -3737,14 +3728,7 @@ class InspectorSerializationDelegate implements DiagnosticsSerializationDelegate
 
   @override
   DiagnosticsSerializationDelegate delegateForNode(DiagnosticsNode node) {
-    // The tricky special case here is that when in the detailsTree,
-    // we keep subtreeDepth from going down to zero until we reach nodes
-    // that also exist in the summary tree. This ensures that every time
-    // you expand a node in the details tree, you expand the entire subtree
-    // up until you reach the next nodes shared with the summary tree.
-    return summaryTree || subtreeDepth > 1 || service._shouldShowInSummaryTree(node)
-        ? copyWith(subtreeDepth: subtreeDepth - 1)
-        : this;
+    return copyWith(subtreeDepth: subtreeDepth - 1);
   }
 
   @override
@@ -3774,7 +3758,6 @@ class InspectorSerializationDelegate implements DiagnosticsSerializationDelegate
   DiagnosticsSerializationDelegate copyWith({int? subtreeDepth, bool? includeProperties, bool? expandPropertyValues}) {
     return InspectorSerializationDelegate(
       groupName: groupName,
-      summaryTree: summaryTree,
       maxDescendantsTruncatableNode: maxDescendantsTruncatableNode,
       expandPropertyValues: expandPropertyValues ?? this.expandPropertyValues,
       subtreeDepth: subtreeDepth ?? this.subtreeDepth,
