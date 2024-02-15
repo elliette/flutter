@@ -723,7 +723,7 @@ class WebDevFS implements DevFS {
                 dwds.extensionDebugConnections.stream.first)
             : await dwds.debugConnection(appConnection);
         if (foundFirstConnection) {
-          appConnection.runMain();
+          _maybeRunMainImmediately(appConnection);
         } else {
           foundFirstConnection = true;
           final vm_service.VmService vmService = await vmServiceFactory(
@@ -747,6 +747,14 @@ class WebDevFS implements DevFS {
       }
     });
     return firstConnection.future;
+  }
+
+  void _maybeRunMainImmediately(AppConnection appConnection) {
+    // If [shouldPauseIsolatesOnStart] is true, DWDS waits for a resume request
+    // before running the app's main method.
+    if (!dwds.shouldPauseIsolatesOnStart) {
+      appConnection.runMain();
+    }
   }
 
   @override
