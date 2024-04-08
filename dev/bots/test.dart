@@ -66,6 +66,7 @@ import 'package:process/process.dart';
 import 'browser.dart';
 import 'run_command.dart';
 import 'service_worker_test.dart';
+import 'suite_runners/run_add_to_app_life_cycle_tests.dart';
 import 'tool_subsharding.dart';
 import 'utils.dart';
 
@@ -187,6 +188,8 @@ String get shuffleSeed {
   return _shuffleSeed!;
 }
 
+final bool _isRandomizationOff = bool.tryParse(Platform.environment['TEST_RANDOMIZATION_OFF'] ?? '') ?? false;
+
 /// When you call this, you can pass additional arguments to pass custom
 /// arguments to flutter test. For example, you might want to call this
 /// script with the parameter --local-engine=host_debug_unopt to
@@ -228,7 +231,7 @@ Future<void> main(List<String> args) async {
       printProgress('Running task: ${Platform.environment[CIRRUS_TASK_NAME]}');
     }
     await selectShard(<String, ShardRunner>{
-      'add_to_app_life_cycle_tests': _runAddToAppLifeCycleTests,
+      'add_to_app_life_cycle_tests': () => addToAppLifeCycleRunner(flutterRoot),
       'build_tests': _runBuildTests,
       'framework_coverage': _runFrameworkCoverage,
       'framework_tests': _runFrameworkTests,
@@ -242,6 +245,8 @@ Future<void> main(List<String> args) async {
       'web_tests': _runWebHtmlUnitTests,
       // All the unit/widget tests run using `flutter test --platform=chrome --web-renderer=canvaskit`
       'web_canvaskit_tests': _runWebCanvasKitUnitTests,
+      // All the unit/widget tests run using `flutter test --platform=chrome --wasm --web-renderer=skwasm`
+      'web_skwasm_tests': _runWebSkwasmUnitTests,
       // All web integration tests
       'web_long_running_tests': _runWebLongRunningTests,
       'flutter_plugins': _runFlutterPackagesTests,
@@ -346,7 +351,26 @@ Future<void> _runTestHarnessTests() async {
           : 'Failed to find the stack trace for the pending Timer.\n\n'
             'stdout:\n${result.flattenedStdout}\n\n'
             'stderr:\n${result.flattenedStderr}';
-    }),
+      },
+    ),
+    () => _runFlutterTest(
+      automatedTests,
+      script: path.join('test_smoke_test', 'fail_test_on_exception_after_test.dart'),
+      expectFailure: true,
+      printOutput: false,
+      outputChecker: (CommandResult result) {
+        const String expectedError = '══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════\n'
+            'The following StateError was thrown running a test (but after the test had completed):\n'
+            'Bad state: Exception thrown after test completed.';
+        if (result.flattenedStdout!.contains(expectedError)) {
+          return null;
+        }
+        return 'Failed to find expected output on stdout.\n\n'
+          'Expected output:\n$expectedError\n\n'
+          'Actual stdout:\n${result.flattenedStdout}\n\n'
+          'Actual stderr:\n${result.flattenedStderr}';
+      },
+    ),
     () => _runFlutterTest(
       automatedTests,
       script: path.join('test_smoke_test', 'crash1_test.dart'),
@@ -574,6 +598,12 @@ Future<void> _runBuildTests() async {
             path.join('dev', 'integration_tests', 'web_compile_tests'),
             path.join('lib', 'dart_io_import.dart'),
           ),
+      // Should be able to compile with a call to:
+      // BackgroundIsolateBinaryMessenger.ensureInitialized.
+      () => _flutterBuildDart2js(
+            path.join('dev', 'integration_tests', 'web_compile_tests'),
+            path.join('lib', 'background_isolate_binary_messenger.dart'),
+          ),
     ],
     runForbiddenFromReleaseTests,
   ]..shuffle(math.Random(0));
@@ -767,19 +797,6 @@ Future<void> _flutterBuildDart2js(String relativePathToApplication, String targe
   );
 }
 
-Future<void> _runAddToAppLifeCycleTests() async {
-  if (Platform.isMacOS) {
-    printProgress('${green}Running add-to-app life cycle iOS integration tests$reset...');
-    final String addToAppDir = path.join(flutterRoot, 'dev', 'integration_tests', 'ios_add2app_life_cycle');
-    await runCommand('./build_and_test.sh',
-      <String>[],
-      workingDirectory: addToAppDir,
-    );
-  } else {
-    printProgress('${yellow}Skipped on this platform (only iOS has add-to-add lifecycle tests at this time).$reset');
-  }
-}
-
 Future<void> _runFrameworkTests() async {
   final List<String> trackWidgetCreationAlternatives = <String>['--track-widget-creation', '--no-track-widget-creation'];
 
@@ -841,19 +858,16 @@ Future<void> _runFrameworkTests() async {
   }
 
   Future<void> runExampleTests() async {
-    // TODO(gspencergoog): Currently Linux LUCI bots can't run desktop Flutter applications, https://github.com/flutter/flutter/issues/90676
-    if (!Platform.isLinux || ciProvider != CiProviders.luci) {
-      await runCommand(
-        flutter,
-        <String>['config', '--enable-${Platform.operatingSystem}-desktop'],
-        workingDirectory: flutterRoot,
-      );
-      await runCommand(
-        dart,
-        <String>[path.join(flutterRoot, 'dev', 'tools', 'examples_smoke_test.dart')],
-        workingDirectory: path.join(flutterRoot, 'examples', 'api'),
-      );
-    }
+    await runCommand(
+      flutter,
+      <String>['config', '--enable-${Platform.operatingSystem}-desktop'],
+      workingDirectory: flutterRoot,
+    );
+    await runCommand(
+      dart,
+      <String>[path.join(flutterRoot, 'dev', 'tools', 'examples_smoke_test.dart')],
+      workingDirectory: path.join(flutterRoot, 'examples', 'api'),
+    );
     for (final FileSystemEntity entity in Directory(path.join(flutterRoot, 'examples')).listSync()) {
       if (entity is! Directory || !Directory(path.join(entity.path, 'test')).existsSync()) {
         continue;
@@ -1101,14 +1115,18 @@ Future<void> _runFrameworkCoverage() async {
 }
 
 Future<void> _runWebHtmlUnitTests() {
-  return _runWebUnitTests('html');
+  return _runWebUnitTests('html', false);
 }
 
 Future<void> _runWebCanvasKitUnitTests() {
-  return _runWebUnitTests('canvaskit');
+  return _runWebUnitTests('canvaskit', false);
 }
 
-Future<void> _runWebUnitTests(String webRenderer) async {
+Future<void> _runWebSkwasmUnitTests() {
+  return _runWebUnitTests('skwasm', true);
+}
+
+Future<void> _runWebUnitTests(String webRenderer, bool useWasm) async {
   final Map<String, ShardRunner> subshards = <String, ShardRunner>{};
 
   final Directory flutterPackageDirectory = Directory(path.join(flutterRoot, 'packages', 'flutter'));
@@ -1144,6 +1162,7 @@ Future<void> _runWebUnitTests(String webRenderer) async {
         index * testsPerShard,
         (index + 1) * testsPerShard,
       ),
+      useWasm,
     );
   }
 
@@ -1159,16 +1178,19 @@ Future<void> _runWebUnitTests(String webRenderer) async {
         (webShardCount - 1) * testsPerShard,
         allTests.length,
       ),
+      useWasm,
     );
     await _runFlutterWebTest(
       webRenderer,
       path.join(flutterRoot, 'packages', 'flutter_web_plugins'),
       <String>['test'],
+      useWasm,
     );
     await _runFlutterWebTest(
       webRenderer,
       path.join(flutterRoot, 'packages', 'flutter_driver'),
       <String>[path.join('test', 'src', 'web_tests', 'web_extension_test.dart')],
+      useWasm,
     );
   };
 
@@ -1239,9 +1261,11 @@ Future<void> _runWebLongRunningTests() async {
     () => _runWebE2eTest('scroll_wheel_integration', buildMode: 'debug', renderer: 'html'),
 
     // This test doesn't do anything interesting w.r.t. rendering, so we don't run the full build mode x renderer matrix.
-    () => _runWebE2eTest('text_editing_integration', buildMode: 'debug', renderer: 'canvaskit'),
-    () => _runWebE2eTest('text_editing_integration', buildMode: 'profile', renderer: 'html'),
-    () => _runWebE2eTest('text_editing_integration', buildMode: 'release', renderer: 'html'),
+    // These tests have been extremely flaky, so we are temporarily disabling them until we figure out how to make them more robust.
+    // See https://github.com/flutter/flutter/issues/143834
+    // () => _runWebE2eTest('text_editing_integration', buildMode: 'debug', renderer: 'canvaskit'),
+    // () => _runWebE2eTest('text_editing_integration', buildMode: 'profile', renderer: 'html'),
+    // () => _runWebE2eTest('text_editing_integration', buildMode: 'release', renderer: 'html'),
 
     // This test doesn't do anything interesting w.r.t. rendering, so we don't run the full build mode x renderer matrix.
     () => _runWebE2eTest('url_strategy_integration', buildMode: 'debug', renderer: 'html'),
@@ -1317,11 +1341,19 @@ Future<void> _runWebLongRunningTests() async {
       'html',
       path.join(flutterRoot, 'packages', 'integration_test'),
       <String>['test/web_extension_test.dart'],
+      false,
     ),
     () => _runFlutterWebTest(
       'canvaskit',
       path.join(flutterRoot, 'packages', 'integration_test'),
       <String>['test/web_extension_test.dart'],
+      false,
+    ),
+    () => _runFlutterWebTest(
+      'skwasm',
+      path.join(flutterRoot, 'packages', 'integration_test'),
+      <String>['test/web_extension_test.dart'],
+      true,
     ),
   ];
 
@@ -1688,7 +1720,7 @@ const List<String> expectedEntitlements = <String>[
 ///
 /// This list should be kept in sync with the actual contents of Flutter's
 /// cache.
-Future<List<String>> binariesWithEntitlements(String flutterRoot) async {
+List<String> binariesWithEntitlements(String flutterRoot) {
   return <String> [
     'artifacts/engine/android-arm-profile/darwin-x64/gen_snapshot',
     'artifacts/engine/android-arm-release/darwin-x64/gen_snapshot',
@@ -1729,11 +1761,11 @@ Future<List<String>> binariesWithEntitlements(String flutterRoot) async {
 ///
 /// This list should be kept in sync with the actual contents of Flutter's
 /// cache.
-Future<List<String>> binariesWithoutEntitlements(String flutterRoot) async {
+List<String> binariesWithoutEntitlements(String flutterRoot) {
   return <String>[
-    'artifacts/engine/darwin-x64-profile/FlutterMacOS.framework/Versions/A/FlutterMacOS',
-    'artifacts/engine/darwin-x64-release/FlutterMacOS.framework/Versions/A/FlutterMacOS',
-    'artifacts/engine/darwin-x64/FlutterMacOS.framework/Versions/A/FlutterMacOS',
+    'artifacts/engine/darwin-x64-profile/FlutterMacOS.xcframework/macos-arm64_x86_64/FlutterMacOS.framework/Versions/A/FlutterMacOS',
+    'artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework/macos-arm64_x86_64/FlutterMacOS.framework/Versions/A/FlutterMacOS',
+    'artifacts/engine/darwin-x64/FlutterMacOS.xcframework/macos-arm64_x86_64/FlutterMacOS.framework/Versions/A/FlutterMacOS',
     'artifacts/engine/darwin-x64/font-subset',
     'artifacts/engine/darwin-x64/impellerc',
     'artifacts/engine/darwin-x64/libpath_ops.dylib',
@@ -1755,6 +1787,25 @@ Future<List<String>> binariesWithoutEntitlements(String flutterRoot) async {
   .map((String relativePath) => path.join(flutterRoot, 'bin', 'cache', relativePath)).toList();
 }
 
+/// xcframeworks that are expected to be codesigned.
+///
+/// This list should be kept in sync with the actual contents of Flutter's
+/// cache.
+List<String> signedXcframeworks(String flutterRoot) {
+  return <String>[
+    'artifacts/engine/ios-profile/Flutter.xcframework',
+    'artifacts/engine/ios-profile/extension_safe/Flutter.xcframework',
+    'artifacts/engine/ios-release/Flutter.xcframework',
+    'artifacts/engine/ios-release/extension_safe/Flutter.xcframework',
+    'artifacts/engine/ios/Flutter.xcframework',
+    'artifacts/engine/ios/extension_safe/Flutter.xcframework',
+    'artifacts/engine/darwin-x64-profile/FlutterMacOS.xcframework',
+    'artifacts/engine/darwin-x64-release/FlutterMacOS.xcframework',
+    'artifacts/engine/darwin-x64/FlutterMacOS.xcframework',
+  ]
+  .map((String relativePath) => path.join(flutterRoot, 'bin', 'cache', relativePath)).toList();
+}
+
 /// Verify the existence of all expected binaries in cache.
 ///
 /// This function ignores code signatures and entitlements, and is intended to
@@ -1769,13 +1820,11 @@ Future<void> verifyExist(
   final Set<String> foundFiles = <String>{};
   final String cacheDirectory =  path.join(flutterRoot, 'bin', 'cache');
 
-
-
   for (final String binaryPath
       in await findBinaryPaths(cacheDirectory, processManager: processManager)) {
-    if ((await binariesWithEntitlements(flutterRoot)).contains(binaryPath)) {
+    if (binariesWithEntitlements(flutterRoot).contains(binaryPath)) {
       foundFiles.add(binaryPath);
-    } else if ((await binariesWithoutEntitlements(flutterRoot)).contains(binaryPath)) {
+    } else if (binariesWithoutEntitlements(flutterRoot).contains(binaryPath)) {
       foundFiles.add(binaryPath);
     } else {
       throw Exception(
@@ -1783,7 +1832,7 @@ Future<void> verifyExist(
     }
   }
 
-  final List<String> allExpectedFiles = await binariesWithEntitlements(flutterRoot) + await binariesWithoutEntitlements(flutterRoot);
+  final List<String> allExpectedFiles = binariesWithEntitlements(flutterRoot) + binariesWithoutEntitlements(flutterRoot);
   if (foundFiles.length < allExpectedFiles.length) {
     final List<String> unfoundFiles = allExpectedFiles
         .where(
@@ -1807,71 +1856,76 @@ Future<void> verifySignatures(
   String flutterRoot,
   {@visibleForTesting ProcessManager processManager = const LocalProcessManager()}
 ) async {
-  final List<String> unsignedBinaries = <String>[];
+  final List<String> unsignedFiles = <String>[];
   final List<String> wrongEntitlementBinaries = <String>[];
-  final List<String> unexpectedBinaries = <String>[];
+  final List<String> unexpectedFiles = <String>[];
   final String cacheDirectory =  path.join(flutterRoot, 'bin', 'cache');
 
-  for (final String binaryPath
-      in await findBinaryPaths(cacheDirectory, processManager: processManager)) {
+  final List<String> binariesAndXcframeworks =
+      (await findBinaryPaths(cacheDirectory, processManager: processManager)) + (await findXcframeworksPaths(cacheDirectory, processManager: processManager));
+
+  for (final String pathToCheck in binariesAndXcframeworks) {
     bool verifySignature = false;
     bool verifyEntitlements = false;
-    if ((await binariesWithEntitlements(flutterRoot)).contains(binaryPath)) {
+    if (binariesWithEntitlements(flutterRoot).contains(pathToCheck)) {
       verifySignature = true;
       verifyEntitlements = true;
     }
-    if ((await binariesWithoutEntitlements(flutterRoot)).contains(binaryPath)) {
+    if (binariesWithoutEntitlements(flutterRoot).contains(pathToCheck)) {
+      verifySignature = true;
+    }
+    if (signedXcframeworks(flutterRoot).contains(pathToCheck)) {
       verifySignature = true;
     }
     if (!verifySignature && !verifyEntitlements) {
-      unexpectedBinaries.add(binaryPath);
-      print('Unexpected binary $binaryPath found in cache!');
+      unexpectedFiles.add(pathToCheck);
+      print('Unexpected binary or xcframework $pathToCheck found in cache!');
       continue;
     }
-    print('Verifying the code signature of $binaryPath');
+    print('Verifying the code signature of $pathToCheck');
     final io.ProcessResult codeSignResult = await processManager.run(
       <String>[
         'codesign',
         '-vvv',
-        binaryPath,
+        pathToCheck,
       ],
     );
     if (codeSignResult.exitCode != 0) {
-      unsignedBinaries.add(binaryPath);
+      unsignedFiles.add(pathToCheck);
       print(
-        'File "$binaryPath" does not appear to be codesigned.\n'
+        'File "$pathToCheck" does not appear to be codesigned.\n'
         'The `codesign` command failed with exit code ${codeSignResult.exitCode}:\n'
         '${codeSignResult.stderr}\n',
       );
       continue;
     }
     if (verifyEntitlements) {
-      print('Verifying entitlements of $binaryPath');
-      if (!(await hasExpectedEntitlements(binaryPath, flutterRoot, processManager: processManager))) {
-        wrongEntitlementBinaries.add(binaryPath);
+      print('Verifying entitlements of $pathToCheck');
+      if (!(await hasExpectedEntitlements(pathToCheck, flutterRoot, processManager: processManager))) {
+        wrongEntitlementBinaries.add(pathToCheck);
       }
     }
   }
 
   // First print all deviations from expectations
-  if (unsignedBinaries.isNotEmpty) {
-    print('Found ${unsignedBinaries.length} unsigned binaries:');
-    unsignedBinaries.forEach(print);
+  if (unsignedFiles.isNotEmpty) {
+    print('Found ${unsignedFiles.length} unsigned files:');
+    unsignedFiles.forEach(print);
   }
 
   if (wrongEntitlementBinaries.isNotEmpty) {
-    print('Found ${wrongEntitlementBinaries.length} binaries with unexpected entitlements:');
+    print('Found ${wrongEntitlementBinaries.length} files with unexpected entitlements:');
     wrongEntitlementBinaries.forEach(print);
   }
 
-  if (unexpectedBinaries.isNotEmpty) {
-    print('Found ${unexpectedBinaries.length} unexpected binaries in the cache:');
-    unexpectedBinaries.forEach(print);
+  if (unexpectedFiles.isNotEmpty) {
+    print('Found ${unexpectedFiles.length} unexpected files in the cache:');
+    unexpectedFiles.forEach(print);
   }
 
   // Finally, exit on any invalid state
-  if (unsignedBinaries.isNotEmpty) {
-    throw Exception('Test failed because unsigned binaries detected.');
+  if (unsignedFiles.isNotEmpty) {
+    throw Exception('Test failed because unsigned files detected.');
   }
 
   if (wrongEntitlementBinaries.isNotEmpty) {
@@ -1881,10 +1935,10 @@ Future<void> verifySignatures(
     );
   }
 
-  if (unexpectedBinaries.isNotEmpty) {
-    throw Exception('Test failed because unexpected binaries found in the cache.');
+  if (unexpectedFiles.isNotEmpty) {
+    throw Exception('Test failed because unexpected files found in the cache.');
   }
-  print('Verified that binaries are codesigned and have expected entitlements.');
+  print('Verified that files are codesigned and have expected entitlements.');
 }
 
 /// Find every binary file in the given [rootDirectory].
@@ -1913,6 +1967,30 @@ Future<List<String>> findBinaryPaths(
     }
   });
   return allBinaryPaths;
+}
+
+/// Find every xcframework in the given [rootDirectory].
+Future<List<String>> findXcframeworksPaths(
+    String rootDirectory,
+    {@visibleForTesting ProcessManager processManager = const LocalProcessManager()
+    }) async {
+  final io.ProcessResult result = await processManager.run(
+    <String>[
+      'find',
+      rootDirectory,
+      '-type',
+      'd',
+      '-name',
+      '*xcframework',
+    ],
+  );
+  final List<String> allXcframeworkPaths = LineSplitter.split(result.stdout as String)
+      .where((String s) => s.isNotEmpty)
+      .toList();
+  for (final String path in allXcframeworkPaths) {
+    print('Found: $path\n');
+  }
+  return allXcframeworkPaths;
 }
 
 /// Check mime-type of file at [filePath] to determine if it is binary.
@@ -1959,7 +2037,7 @@ Future<bool> hasExpectedEntitlements(
   final String output = entitlementResult.stdout as String;
   for (final String entitlement in expectedEntitlements) {
     final bool entitlementExpected =
-        (await binariesWithEntitlements(flutterRoot)).contains(binaryPath);
+        binariesWithEntitlements(flutterRoot).contains(binaryPath);
     if (output.contains(entitlement) != entitlementExpected) {
       print(
         'File "$binaryPath" ${entitlementExpected ? 'does not have expected' : 'has unexpected'} '
@@ -2240,15 +2318,19 @@ Future<void> _runWebDebugTest(String target, {
   }
 }
 
-Future<void> _runFlutterWebTest(String webRenderer, String workingDirectory, List<String> tests) async {
+Future<void> _runFlutterWebTest(
+  String webRenderer,
+  String workingDirectory,
+  List<String> tests,
+  bool useWasm,
+) async {
   await runCommand(
     flutter,
     <String>[
       'test',
-      if (ciProvider == CiProviders.cirrus)
-        '--concurrency=1',  // do not parallelize on Cirrus, to reduce flakiness
       '-v',
       '--platform=chrome',
+      if (useWasm) '--wasm',
       '--web-renderer=$webRenderer',
       '--dart-define=DART_HHH_BOT=$_runningInDartHHHBot',
       ...flutterTestArgs,
@@ -2385,7 +2467,7 @@ Future<void> _runFlutterTest(String workingDirectory, {
 
   final List<String> args = <String>[
     'test',
-    if (shuffleTests) '--test-randomize-ordering-seed=$shuffleSeed',
+    if (shuffleTests && !_isRandomizationOff) '--test-randomize-ordering-seed=$shuffleSeed',
     if (fatalWarnings) '--fatal-warnings',
     ...options,
     ...tags,
@@ -2440,21 +2522,6 @@ void adjustEnvironmentToEnableFlutterAsserts(Map<String, String> environment) {
     toolsArgs += ' --enable-asserts';
   }
   environment['FLUTTER_TOOL_ARGS'] = toolsArgs.trim();
-}
-
-enum CiProviders {
-  cirrus,
-  luci,
-}
-
-CiProviders? get ciProvider {
-  if (Platform.environment['CIRRUS_CI'] == 'true') {
-    return CiProviders.cirrus;
-  }
-  if (Platform.environment['LUCI_CONTEXT'] != null) {
-    return CiProviders.luci;
-  }
-  return null;
 }
 
 /// Checks the given file's contents to determine if they match the allowed

@@ -1380,7 +1380,7 @@ void main() {
       find.byType(Material),
       paints
         ..path(color: const Color(0xff000000))
-        ..path(color: const Color(0xffece6f3))
+        ..path(color: const Color(0xfff7f2fa))
         ..save()
         ..save(),
     );
@@ -1394,7 +1394,7 @@ void main() {
       find.byType(Material),
       paints
         ..path(color: const Color(0xff000000))
-        ..path(color: const Color(0xffece6f3))
+        ..path(color: const Color(0xfff7f2fa))
         ..save()
         ..save(),
     );
@@ -1802,6 +1802,36 @@ void main() {
     expect(tester.getSize(find.byType(ListTile)), const Size(800.0, 56.0));
     expect(right('title'), 708.0);
   });
+  testWidgets('ListTile minTileHeight', (WidgetTester tester) async {
+    Widget buildFrame(TextDirection textDirection, { double? minTileHeight, }) {
+      return MediaQuery(
+        data: const MediaQueryData(),
+        child: Directionality(
+          textDirection: textDirection,
+          child: Material(
+            child: Container(
+              alignment: Alignment.topLeft,
+              child: ListTile(
+                minTileHeight: minTileHeight,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Default list tile with height = 56.0
+    await tester.pumpWidget(buildFrame(TextDirection.ltr));
+    expect(tester.getSize(find.byType(ListTile)), const Size(800.0, 56.0));
+
+    // Set list tile height = 30.0
+    await tester.pumpWidget(buildFrame(TextDirection.ltr, minTileHeight: 30));
+    expect(tester.getSize(find.byType(ListTile)), const Size(800.0, 30.0));
+
+    // Set list tile height = 60.0
+    await tester.pumpWidget(buildFrame(TextDirection.ltr, minTileHeight: 60));
+    expect(tester.getSize(find.byType(ListTile)), const Size(800.0, 60.0));
+  });
 
   testWidgets('colors are applied to leading and trailing text widgets', (WidgetTester tester) async {
     final Key leadingKey = UniqueKey();
@@ -2016,10 +2046,6 @@ void main() {
     expect(
       description,
       equalsIgnoringHashCodes(<String>[
-        'leading: Text',
-        'title: Text',
-        'subtitle: Text',
-        'trailing: Text',
         'isThreeLine: THREE_LINE',
         'dense: true',
         'visualDensity: VisualDensity#00000(h: 0.0, v: 0.0)',

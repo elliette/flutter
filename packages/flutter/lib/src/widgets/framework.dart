@@ -3763,7 +3763,9 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
   ///
   /// See the [RenderObjectElement] documentation for more information on slots.
   @protected
+  @pragma('dart2js:tryInline')
   @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
   Element? updateChild(Element? child, Widget? newWidget, Object? newSlot) {
     if (newWidget == null) {
       if (child != null) {
@@ -4285,7 +4287,9 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
   /// The element returned by this function will already have been mounted and
   /// will be in the "active" lifecycle state.
   @protected
+  @pragma('dart2js:tryInline')
   @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
   Element inflateWidget(Widget newWidget, Object? newSlot) {
     final bool isTimelineTracked = !kReleaseMode && _isProfileBuildsEnabledFor(newWidget);
     if (isTimelineTracked) {
@@ -5167,7 +5171,9 @@ abstract class Element extends DiagnosticableTree implements BuildContext {
   /// Another example is the [AnimatedBuilder.child] property, which allows the
   /// non-animating parts of a subtree to remain static even as the
   /// [AnimatedBuilder.builder] callback recreates the other components.
+  @pragma('dart2js:tryInline')
   @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
   void rebuild({bool force = false}) {
     assert(_lifecycleState != _ElementLifecycle.initial);
     if (_lifecycleState != _ElementLifecycle.active || (!_dirty && !force)) {
@@ -5855,11 +5861,13 @@ class ParentDataElement<T extends ParentData> extends ProxyElement {
     void applyParentDataToChild(Element child) {
       if (child is RenderObjectElement) {
         child._updateParentData(widget);
-      } else {
-        child.visitChildren(applyParentDataToChild);
+      } else if (child.renderObjectAttachingChild != null) {
+        applyParentDataToChild(child.renderObjectAttachingChild!);
       }
     }
-    visitChildren(applyParentDataToChild);
+    if (renderObjectAttachingChild != null) {
+      applyParentDataToChild(renderObjectAttachingChild!);
+    }
   }
 
   /// Calls [ParentDataWidget.applyParentData] on the given widget, passing it
@@ -6483,7 +6491,9 @@ abstract class RenderObjectElement extends Element {
     _performRebuild(); // calls widget.updateRenderObject()
   }
 
+  @pragma('dart2js:tryInline')
   @pragma('vm:prefer-inline')
+  @pragma('wasm:prefer-inline')
   void _performRebuild() {
     assert(() {
       _debugDoingBuild = true;
@@ -6536,7 +6546,7 @@ abstract class RenderObjectElement extends Element {
             ErrorSummary('Incorrect use of ParentDataWidget.'),
             ...parentDataWidget._debugDescribeIncorrectParentDataType(
               parentData: renderObject.parentData,
-              parentDataCreator: _ancestorRenderObjectElement!.widget as RenderObjectWidget,
+              parentDataCreator: _ancestorRenderObjectElement?.widget as RenderObjectWidget?,
               ownershipChain: ErrorDescription(debugGetCreatorChain(10)),
             ),
           ]);

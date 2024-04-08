@@ -534,10 +534,7 @@ void main() {
     expect(find.text('ddd1'), findsOneWidget);
   });
 
-  testWidgets('Three NestedScrollViews with one ScrollController',
-  // TODO(polina-c): Remove when PageView is fixed, https://github.com/flutter/flutter/issues/141119
-  experimentalLeakTesting: LeakTesting.settings.withIgnoredAll(),
-  (WidgetTester tester) async {
+  testWidgets('Three NestedScrollViews with one ScrollController', (WidgetTester tester) async {
     final TrackingScrollController controller = TrackingScrollController();
     addTearDown(controller.dispose);
     expect(controller.mostRecentlyUpdatedPosition, isNull);
@@ -3073,6 +3070,7 @@ void main() {
       await tester.drag(
         find.byType(CustomScrollView),
         const Offset(0.0, -20.0),
+        pointer: 1,
       );
       await tester.pumpAndSettle();
       final NestedScrollViewState nestedScrollView = tester.state<NestedScrollViewState>(
