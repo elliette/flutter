@@ -474,6 +474,10 @@ enum WidgetInspectorServiceExtensions {
   ///   extension is registered.
   screenshot,
 
+  /// Name of service extension that, when called, will add a a debug paint
+  /// boundary box around the widget specified by its ID.
+  highlightWidget,
+
   /// Name of service extension that, when called, will return the
   /// [DiagnosticsNode] data for the currently selected [Element] and will
   /// include information about the [Element]'s layout properties.

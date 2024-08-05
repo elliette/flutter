@@ -3302,6 +3302,12 @@ abstract class RenderObject with DiagnosticableTreeMixin implements HitTestTarge
   /// Override this method to paint debugging information.
   void debugPaint(PaintingContext context, Offset offset) { }
 
+  /// Override this method to paint debugging information for a single widget.
+  ///
+  /// Unlike [debugPaint], this does not depend on [debugPaintSizeEnabled] being
+  /// enabled.
+  void debugPaintForWidget(PaintingContext context, Offset offset) { }
+
   /// Paint this render object into the given context at the given offset.
   ///
   /// Subclasses should override this method to provide a visual appearance

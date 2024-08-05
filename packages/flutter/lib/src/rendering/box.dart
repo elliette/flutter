@@ -3012,6 +3012,12 @@ abstract class RenderBox extends RenderObject {
     }());
   }
 
+  @override
+  void debugPaintForWidget(PaintingContext context, Offset offset) {
+    print('Calling debug paint with size $size and offset $offset');
+    debugPaintSize(context, offset);
+  }
+
   /// In debug mode, paints a border around this render box.
   ///
   /// Called for every [RenderBox] when [debugPaintSizeEnabled] is true.

@@ -1291,6 +1291,42 @@ mixin WidgetInspectorService {
       callback: isWidgetCreationTracked,
       registerExtension: registerExtension,
     );
+
+    registerServiceExtension(
+      name: WidgetInspectorServiceExtensions.highlightWidget.name,
+      callback: (Map<String, String> parameters) async {
+        final Object? object = toObject(parameters['id']);
+        // Verify object is either an element or render object:
+        if (object is! Element && object is! RenderObject) {
+          return <String, Object?>{'result': null};
+        }
+        // Get the render object:
+        final RenderObject? renderObject =
+            object is Element ? object.renderObject : (object as RenderObject?);
+        if (renderObject == null || !renderObject.attached) {
+          return <String, Object?>{'result': null};
+        }
+
+        // Find the repaint boundary for the render object:
+        RenderObject repaintBoundary = renderObject;
+        while (!repaintBoundary.isRepaintBoundary) {
+          repaintBoundary = repaintBoundary.parent!;
+        }
+        final OffsetLayer? offsetLayer =
+            repaintBoundary.debugLayer as OffsetLayer?;
+        // final ContainerLayer? layer = repaintBoundary.debugLayer;
+        if (offsetLayer != null) {
+          final Offset offset = offsetLayer.offset;
+          final PaintingContext context =
+              PaintingContext(offsetLayer, renderObject.paintBounds);
+          renderObject.debugPaintForWidget(context, offset);
+          return <String, Object?>{'result': 'success'};
+        }
+        return <String, Object?>{'result': null};
+      },
+      registerExtension: registerExtension,
+    );
+
     registerServiceExtension(
       name: WidgetInspectorServiceExtensions.screenshot.name,
       callback: (Map<String, String> parameters) async {
