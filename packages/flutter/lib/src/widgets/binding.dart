@@ -477,6 +477,17 @@ mixin WidgetsBinding on BindingBase, ServicesBinding, SchedulerBinding, GestureB
   ValueNotifier<bool> get debugShowWidgetInspectorOverrideNotifier => _debugShowWidgetInspectorOverrideNotifierObject ??= ValueNotifier<bool>(false);
   ValueNotifier<bool>? _debugShowWidgetInspectorOverrideNotifierObject;
 
+
+  // bool get debugHighlightWidgetsOnSelect {
+  //   return debugHighlightWidgetsOnSelectNotifier.value;
+  // }
+  // set debugHighlightWidgetsOnSelect (bool value) {
+  //   debugHighlightWidgetsOnSelectNotifier.value = value;
+  // }
+
+  // ValueNotifier<bool> get debugHighlightWidgetsOnSelectNotifier => _debugHighlightWidgetsOnSelectNotifier  ??= ValueNotifier<bool>(false);
+  // ValueNotifier<bool>? _debugHighlightWidgetsOnSelectNotifier;
+
   @visibleForTesting
   @override
   void resetInternalState() {

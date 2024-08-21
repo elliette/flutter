@@ -285,9 +285,6 @@ class _TestWidgetInspectorService extends TestWidgetInspectorService {
   static void runTests() {
     final TestWidgetInspectorService service = TestWidgetInspectorService();
     WidgetInspectorService.instance = service;
-    setUp(() {
-      WidgetInspectorService.instance.isSelectMode.value = true;
-    });
     tearDown(() async {
       service.resetAllState();
 
@@ -750,10 +747,6 @@ class _TestWidgetInspectorService extends TestWidgetInspectorService {
         ),
         equals('Child 1'),
       );
-
-      // Re-enable select mode since it's state is shared between the
-      // WidgetInspectors
-      WidgetInspectorService.instance.isSelectMode.value = true;
 
       await tester.tap(find.text('Child 2'), warnIfMissed: false);
       await tester.pump();

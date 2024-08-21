@@ -23,6 +23,7 @@ import 'arc.dart';
 import 'colors.dart';
 import 'floating_action_button.dart';
 import 'icons.dart';
+import 'material.dart';
 import 'material_localizations.dart';
 import 'page.dart';
 import 'scaffold.dart' show ScaffoldMessenger, ScaffoldMessengerState;
@@ -934,13 +935,63 @@ class _MaterialAppState extends State<MaterialApp> {
     ];
   }
 
-  Widget _inspectorSelectButtonBuilder(BuildContext context, VoidCallback onPressed) {
-    return FloatingActionButton(
+  Widget _inspectorSelectButtonBuilder(
+      BuildContext context, VoidCallback onPressed) {
+    // note: wrapping in material is not enough to get an overlay.
+    return Material(
+      child: FloatingActionButton(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.red,
       onPressed: onPressed,
+        tooltip: 'Exit widget selection',
       mini: true,
-      child: const Icon(Icons.search),
+        child: const Icon(Icons.close),
+      ),
     );
   }
+
+  // Following are commented out experiments that did not work:
+
+  // Widget _inspectorSelectButtonBuilderWithOverlay(
+  //     BuildContext context, VoidCallback onPressed) {
+  //   final OverlayEntry overlayEntry = OverlayEntry(builder: (BuildContext _) {
+  //     return Draggable<FloatingActionButton>(
+  //       feedback: FloatingActionButton(
+  //         backgroundColor: Colors.black,
+  //         foregroundColor: Colors.yellow,
+  //         child: const Icon(Icons.close),
+  //         onPressed: () {},
+  //       ),
+  //       child: FloatingActionButton(
+  //         backgroundColor: Colors.black,
+  //         foregroundColor: Colors.yellow,
+  //         // tooltip: 'Exit Select Widget Mode',
+  //         onPressed: onPressed,
+  //         child: const Icon(Icons.close),
+  //       ),
+  //     );
+  //   });
+
+  //   return Overlay(
+  //     initialEntries: [overlayEntry],
+  //   );
+  // }
+
+  // Widget _inspectorSelectButtonBuilderWithImage(
+  //     BuildContext context, VoidCallback onPressed) {
+  //   return FloatingActionButton(
+  //       onPressed: onPressed,
+  //       mini: true,
+  //       child: const Image(
+  //         image: AssetImage(
+  //           'assets/exit-widget-selection.png',
+  //           package: 'flutter',
+  //         ),
+  //         height: 40,
+  //         width: 40,
+  //         fit: BoxFit.fill,
+  //       ));
+  // }
 
   ThemeData _themeBuilder(BuildContext context) {
     ThemeData? theme;
@@ -989,7 +1040,8 @@ class _MaterialAppState extends State<MaterialApp> {
       }
       childWidget = AnimatedTheme(
         data: theme,
-        duration: widget.themeAnimationStyle?.duration ?? widget.themeAnimationDuration,
+        duration: widget.themeAnimationStyle?.duration ??
+            widget.themeAnimationDuration,
         curve: widget.themeAnimationStyle?.curve ?? widget.themeAnimationCurve,
         child: childWidget,
       );

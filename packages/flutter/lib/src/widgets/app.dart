@@ -1753,13 +1753,14 @@ class _WidgetsAppState extends State<WidgetsApp> with WidgetsBindingObserver {
       result = ValueListenableBuilder<bool>(
         valueListenable: WidgetsBinding.instance.debugShowWidgetInspectorOverrideNotifier,
         builder: (BuildContext context, bool debugShowWidgetInspectorOverride, Widget? child) {
-          if (widget.debugShowWidgetInspector || debugShowWidgetInspectorOverride) {
+          // if (widget.debugShowWidgetInspector || debugShowWidgetInspectorOverride) {
+          // Note: This is where the Widget Inspector button is created.
             return WidgetInspector(
               selectButtonBuilder: widget.inspectorSelectButtonBuilder,
               child: child!,
             );
-          }
-          return child!;
+          // }
+          // return child!;
         },
         child: result,
       );

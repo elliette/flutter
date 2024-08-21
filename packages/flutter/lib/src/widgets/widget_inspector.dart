@@ -774,13 +774,6 @@ mixin WidgetInspectorService {
   static WidgetInspectorService get instance => _instance;
   static WidgetInspectorService _instance = _WidgetInspectorService();
 
-  /// Whether the inspector is in select mode.
-  ///
-  /// In select mode, pointer interactions trigger widget selection instead of
-  /// normal interactions. Otherwise the previously selected widget is
-  /// highlighted but the application can be interacted with normally.
-  @visibleForTesting
-  final ValueNotifier<bool> isSelectMode = ValueNotifier<bool>(true);
 
   @protected
   static set instance(WidgetInspectorService instance) {
@@ -1593,9 +1586,11 @@ mixin WidgetInspectorService {
     switch (object) {
       case Element() when object != selection.currentElement:
         selection.currentElement = object;
+        // mark the widget inspector as visible
         _sendInspectEvent(selection.currentElement);
         return true;
       case RenderObject() when object != selection.current:
+        // mark the widget inspector as visible
         selection.current = object;
         _sendInspectEvent(selection.current);
         return true;
@@ -1620,6 +1615,13 @@ mixin WidgetInspectorService {
         stream: 'ToolEvent',
       );
     }
+  }
+
+  /// Changes whether widget selection mode is [enabled].
+  void _changeWidgetSelectionMode(bool enabled) {
+    WidgetsBinding.instance.debugShowWidgetInspectorOverride = enabled;
+    _postExtensionStateChangedEvent(
+        WidgetInspectorServiceExtensions.show.name, enabled);
   }
 
   /// Returns a DevTools uri linking to a specific element on the inspector page.
@@ -2784,24 +2786,24 @@ class _WidgetInspectorState extends State<WidgetInspector>
 
     WidgetInspectorService.instance.selection
         .addListener(_selectionInformationChanged);
-    WidgetInspectorService.instance.isSelectMode
+    WidgetsBinding.instance.debugShowWidgetInspectorOverrideNotifier
         .addListener(_selectionInformationChanged);
     selection = WidgetInspectorService.instance.selection;
-    isSelectMode = WidgetInspectorService.instance.isSelectMode.value;
+    isSelectMode = WidgetsBinding.instance.debugShowWidgetInspectorOverride;
   }
 
   @override
   void dispose() {
     WidgetInspectorService.instance.selection
         .removeListener(_selectionInformationChanged);
-    WidgetInspectorService.instance.isSelectMode
+    WidgetsBinding.instance.debugShowWidgetInspectorOverrideNotifier
         .removeListener(_selectionInformationChanged);
     super.dispose();
   }
 
   void _selectionInformationChanged() => setState((){
     selection = WidgetInspectorService.instance.selection;
-    isSelectMode = WidgetInspectorService.instance.isSelectMode.value;
+        isSelectMode = WidgetsBinding.instance.debugShowWidgetInspectorOverride;
   });
 
   bool _hitTestHelper(
@@ -2924,15 +2926,10 @@ class _WidgetInspectorState extends State<WidgetInspector>
       _inspectAt(_lastPointerLocation!);
       WidgetInspectorService.instance._sendInspectEvent(selection.current);
     }
-
-    // Only exit select mode if there is a button to return to select mode.
-    if (widget.selectButtonBuilder != null) {
-      WidgetInspectorService.instance.isSelectMode.value = false;
-    }
   }
 
-  void _handleEnableSelect() {
-      WidgetInspectorService.instance.isSelectMode.value = true;
+  void _exitSelectionMode() {
+    WidgetInspectorService.instance._changeWidgetSelectionMode(false);
   }
 
   @override
@@ -2954,11 +2951,11 @@ class _WidgetInspectorState extends State<WidgetInspector>
           child: widget.child,
         ),
       ),
-      if (!isSelectMode && widget.selectButtonBuilder != null)
+      if (isSelectMode && widget.selectButtonBuilder != null)
         Positioned(
           left: _kInspectButtonMargin,
           bottom: _kInspectButtonMargin,
-          child: widget.selectButtonBuilder!(context, _handleEnableSelect),
+          child: widget.selectButtonBuilder!(context, _exitSelectionMode),
         ),
       _InspectorOverlay(selection: selection),
     ]);
