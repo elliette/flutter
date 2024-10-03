@@ -394,6 +394,10 @@ enum WidgetInspectorServiceExtensions {
   getRootWidgetTree,
 
   /// Name of service extension that, when called, will return the
+  /// [DiagnosticsNode] data for the root [Element] of the widget tree.
+  getRootWidgetTreeProto,
+
+  /// Name of service extension that, when called, will return the
   /// [DiagnosticsNode] data for the root [Element] of the summary tree, which
   /// only includes [Element]s that were created by user code.
   ///

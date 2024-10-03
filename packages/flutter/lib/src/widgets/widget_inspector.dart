@@ -27,6 +27,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:meta/meta_meta.dart';
+import 'package:widget_inspector_protos/widget_inspector_protos.dart';
 
 import 'basic.dart';
 import 'binding.dart';
@@ -1260,6 +1261,11 @@ mixin WidgetInspectorService {
       registerExtension: registerExtension,
     );
     registerServiceExtension(
+      name: WidgetInspectorServiceExtensions.getRootWidgetTreeProto.name,
+      callback: _getRootWidgetTreeProto,
+      registerExtension: registerExtension,
+    );
+    registerServiceExtension(
       name: WidgetInspectorServiceExtensions.getDetailsSubtree.name,
       callback: (Map<String, String> parameters) async {
         assert(parameters.containsKey('objectGroup'));
@@ -1734,6 +1740,14 @@ mixin WidgetInspectorService {
     return node?.toJsonMap(delegate);
   }
 
+  Map<String, Object?>? _nodeToProto(
+    DiagnosticsNode? node,
+    InspectorSerializationDelegate delegate,
+  ) {
+    final DiagnosticsNodeProto? proto = node?.toProto(delegate);
+    return <String, Object?>{'proto': proto};
+  }
+
   bool _isValueCreatedByLocalProject(Object? value) {
     final _Location? creationLocation = _getCreationLocation(value);
     if (creationLocation == null) {
@@ -1970,6 +1984,24 @@ mixin WidgetInspectorService {
     });
   }
 
+  Future<Map<String, Object?>> _getRootWidgetTreeProto(
+    Map<String, String> parameters,
+  ) {
+    final String groupName = parameters['groupName']!;
+    final bool isSummaryTree = parameters['isSummaryTree'] == 'true';
+    final bool withPreviews = parameters['withPreviews'] == 'true';
+
+    final Map<String, Object?>? result = _getRootWidgetTreeProtoImpl(
+      groupName: groupName,
+      isSummaryTree: isSummaryTree,
+      withPreviews: withPreviews,
+    );
+
+    return Future<Map<String, dynamic>>.value(<String, dynamic>{
+      'result': result,
+    });
+  }
+
   Future<Map<String, Object?>> _getRootWidgetTree(
     Map<String, String> parameters,
   ) {
@@ -2034,7 +2066,54 @@ mixin WidgetInspectorService {
       ),
     );
   }
+  
+  Map<String, Object?>? _getRootWidgetTreeProtoImpl({
+    required String groupName,
+    required bool isSummaryTree,
+    required bool withPreviews,
+    Map<String, Object>? Function(
+            DiagnosticsNode, InspectorSerializationDelegate)?
+        addAdditionalPropertiesCallback,
+  }) {
+    final bool shouldAddAdditionalProperties =
+        addAdditionalPropertiesCallback != null || withPreviews;
 
+    // Combine the given addAdditionalPropertiesCallback with logic to add text
+    // previews as well (if withPreviews is true):
+    Map<String, Object>? combinedAddAdditionalPropertiesCallback(
+      DiagnosticsNode node,
+      InspectorSerializationDelegate delegate,
+    ) {
+      final Map<String, Object> additionalPropertiesJson =
+          addAdditionalPropertiesCallback?.call(node, delegate) ??
+              <String, Object>{};
+      if (!withPreviews) {
+        return additionalPropertiesJson;
+      }
+      final Object? value = node.value;
+      if (value is Element) {
+        final RenderObject? renderObject = value.renderObject;
+        if (renderObject is RenderParagraph) {
+          additionalPropertiesJson['textPreview'] =
+              renderObject.text.toPlainText();
+        }
+      }
+      return additionalPropertiesJson;
+    }
+
+    return _nodeToProto(
+      WidgetsBinding.instance.rootElement?.toDiagnosticsNode(),
+      InspectorSerializationDelegate(
+        groupName: groupName,
+        subtreeDepth: 1000000,
+        summaryTree: isSummaryTree,
+        service: this,
+        addAdditionalPropertiesCallback: shouldAddAdditionalProperties
+            ? combinedAddAdditionalPropertiesCallback
+            : null,
+      ),
+    );
+  }
   /// Returns a JSON representation of the subtree rooted at the
   /// [DiagnosticsNode] object that `diagnosticsNodeId` references providing
   /// information needed for the details subtree view.

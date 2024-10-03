@@ -12,6 +12,7 @@ import 'dart:math' as math;
 import 'dart:ui' show clampDouble;
 
 import 'package:meta/meta.dart';
+import 'package:widget_inspector_protos/widget_inspector_protos.dart';
 
 import 'assertions.dart';
 import 'constants.dart';
@@ -1651,6 +1652,54 @@ abstract class DiagnosticsNode {
       return true;
     }());
     return result;
+  }
+
+  @mustCallSuper
+  DiagnosticsNodeProto toProto(DiagnosticsSerializationDelegate delegate) {
+    final DiagnosticsNodeProto proto = DiagnosticsNodeProto();
+    proto
+      ..hasChildren = getChildren().isNotEmpty
+      ..description = toDescription()
+      ..type = runtimeType.toString();
+    if (name != null) {
+      proto.name = name!;
+    }
+    if (!showSeparator) {
+      proto.showSeparator = showSeparator;
+    }
+    if (!showName) {
+      proto.showName = showName;
+    }
+    if (emptyBodyDescription != null) {
+      proto.emptyBodyDescription = emptyBodyDescription!;
+    }
+    if (style != DiagnosticsTreeStyle.sparse) {
+      // proto.style = style
+    }
+    if (allowTruncate) {
+      proto.allowTruncate = allowTruncate;
+    }
+    if (linePrefix?.isNotEmpty ?? false) {
+      proto.linePrefix = linePrefix!;
+    }
+    if (!allowWrap) {
+      proto.allowWrap = allowWrap;
+    }
+    if (allowNameWrap) {
+      proto.allowNameWrap = allowNameWrap;
+    }
+    if (delegate.includeProperties) {
+      // todo
+    }
+    if (delegate.subtreeDepth > 0) {
+      final children = delegate.filterChildren(getChildren(), this);
+      for (final child in children) {
+        final childProto = child.toProto(delegate);
+        proto.children.add(childProto);
+      }
+    }
+
+    return proto;
   }
 
   /// Serializes a [List] of [DiagnosticsNode]s to a JSON list according to

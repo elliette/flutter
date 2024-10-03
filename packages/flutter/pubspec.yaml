@@ -15,9 +15,10 @@ dependencies:
   material_color_utilities: 0.11.1
   meta: 1.15.0
   vector_math: 2.1.4
+  widget_inspector_protos:
+    path: /Users/elliottbrooks/dev/proto_bufs/widget_tree_protos
   sky_engine:
     sdk: flutter
-
 dev_dependencies:
   flutter_driver:
     sdk: flutter
