@@ -11,8 +11,8 @@ library;
 import 'dart:math' as math;
 import 'dart:ui' show clampDouble;
 
+import 'package:flutter/src/foundation/widget_inspector_protos/diagnostics_node.pb.dart';
 import 'package:meta/meta.dart';
-import 'package:widget_inspector_protos/widget_inspector_protos.dart';
 
 import 'assertions.dart';
 import 'constants.dart';
@@ -2653,6 +2653,55 @@ class DiagnosticsProperty<T> extends DiagnosticsNode {
     }
     return json;
   }
+
+  // @override
+  // Map<String, Object?> toProto(DiagnosticsSerializationDelegate delegate) {
+  //   final T? v = value;
+  //   List<Map<String, Object?>>? properties;
+  //   if (delegate.expandPropertyValues && delegate.includeProperties && v is Diagnosticable && getProperties().isEmpty) {
+  //     // Exclude children for expanded nodes to avoid cycles.
+  //     delegate = delegate.copyWith(subtreeDepth: 0, includeProperties: false);
+  //     properties = DiagnosticsNode.toJsonList(
+  //       delegate.filterProperties(v.toDiagnosticsNode().getProperties(), this),
+  //       this,
+  //       delegate,
+  //     );
+  //   }
+  //   final Map<String, Object?> json = super.toJsonMap(delegate);
+  //   if (properties != null) {
+  //     json['properties'] = properties;
+  //   }
+  //   if (defaultValue != kNoDefaultValue) {
+  //     json['defaultValue'] = defaultValue.toString();
+  //   }
+  //   if (ifEmpty != null) {
+  //     json['ifEmpty'] = ifEmpty;
+  //   }
+  //   if (ifNull != null) {
+  //     json['ifNull'] = ifNull;
+  //   }
+  //   if (tooltip != null) {
+  //     json['tooltip'] = tooltip;
+  //   }
+  //   json['missingIfNull'] = missingIfNull;
+  //   if (exception != null) {
+  //     json['exception'] = exception.toString();
+  //   }
+  //   json['propertyType'] = propertyType.toString();
+  //   json['defaultLevel'] = _defaultLevel.name;
+  //   if (value is Diagnosticable || value is DiagnosticsNode) {
+  //     json['isDiagnosticableValue'] = true;
+  //   }
+  //   if (v is num) {
+  //     // TODO(jacob314): Workaround, since JSON.stringify replaces infinity and NaN with null,
+  //     // https://github.com/flutter/flutter/issues/39937#issuecomment-529558033)
+  //     json['value'] = v.isFinite ? v :  v.toString();
+  //   }
+  //   if (value is String || value is bool || value == null) {
+  //     json['value'] = value;
+  //   }
+  //   return json;
+  // }
 
   /// Returns a string representation of the property value.
   ///

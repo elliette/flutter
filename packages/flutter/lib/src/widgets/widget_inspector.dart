@@ -27,8 +27,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:meta/meta_meta.dart';
-import 'package:widget_inspector_protos/widget_inspector_protos.dart';
 
+import '../foundation/widget_inspector_protos/diagnostics_node.pb.dart';
 import 'basic.dart';
 import 'binding.dart';
 import 'debug.dart';
@@ -1325,6 +1325,7 @@ mixin WidgetInspectorService {
       },
       registerExtension: registerExtension,
     );
+    // TODO: Maybe migrate this to proto as well.
     registerServiceExtension(
       name: WidgetInspectorServiceExtensions.getLayoutExplorerNode.name,
       callback: _getLayoutExplorerNode,
@@ -1745,7 +1746,13 @@ mixin WidgetInspectorService {
     InspectorSerializationDelegate delegate,
   ) {
     final DiagnosticsNodeProto? proto = node?.toProto(delegate);
-    return <String, Object?>{'proto': proto};
+    if (proto == null) {
+      return null;
+    }
+
+    final Uint8List bytes = proto.writeToBuffer();
+    final String encodedProto = base64.encode(bytes);
+    return <String, Object?>{'proto': encodedProto};
   }
 
   bool _isValueCreatedByLocalProject(Object? value) {
@@ -2066,7 +2073,7 @@ mixin WidgetInspectorService {
       ),
     );
   }
-  
+
   Map<String, Object?>? _getRootWidgetTreeProtoImpl({
     required String groupName,
     required bool isSummaryTree,
