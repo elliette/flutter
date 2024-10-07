@@ -34,6 +34,12 @@ class DiagnosticsNodeProto extends $pb.GeneratedMessage {
     $core.bool? hasChildren,
     $core.Iterable<DiagnosticsNodeProto>? properties,
     $core.Iterable<DiagnosticsNodeProto>? children,
+    $core.String? valueId,
+    $core.bool? summaryTree,
+    $core.int? locationId,
+    $core.String? creationLocation,
+    $core.bool? createdByLocalProjet,
+    $core.String? additionalJson,
   }) {
     final $result = create();
     if (name != null) {
@@ -81,6 +87,24 @@ class DiagnosticsNodeProto extends $pb.GeneratedMessage {
     if (children != null) {
       $result.children.addAll(children);
     }
+    if (valueId != null) {
+      $result.valueId = valueId;
+    }
+    if (summaryTree != null) {
+      $result.summaryTree = summaryTree;
+    }
+    if (locationId != null) {
+      $result.locationId = locationId;
+    }
+    if (creationLocation != null) {
+      $result.creationLocation = creationLocation;
+    }
+    if (createdByLocalProjet != null) {
+      $result.createdByLocalProjet = createdByLocalProjet;
+    }
+    if (additionalJson != null) {
+      $result.additionalJson = additionalJson;
+    }
     return $result;
   }
   DiagnosticsNodeProto._() : super();
@@ -103,6 +127,12 @@ class DiagnosticsNodeProto extends $pb.GeneratedMessage {
     ..aOB(13, _omitFieldNames ? '' : 'hasChildren')
     ..pc<DiagnosticsNodeProto>(14, _omitFieldNames ? '' : 'properties', $pb.PbFieldType.PM, subBuilder: DiagnosticsNodeProto.create)
     ..pc<DiagnosticsNodeProto>(15, _omitFieldNames ? '' : 'children', $pb.PbFieldType.PM, subBuilder: DiagnosticsNodeProto.create)
+    ..aOS(16, _omitFieldNames ? '' : 'valueId')
+    ..aOB(17, _omitFieldNames ? '' : 'summaryTree')
+    ..a<$core.int>(18, _omitFieldNames ? '' : 'locationId', $pb.PbFieldType.O3)
+    ..aOS(19, _omitFieldNames ? '' : 'creationLocation')
+    ..aOB(20, _omitFieldNames ? '' : 'createdByLocalProjet')
+    ..aOS(21, _omitFieldNames ? '' : 'additionalJson')
     ..hasRequiredFields = false
   ;
 
@@ -249,6 +279,60 @@ class DiagnosticsNodeProto extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(15)
   $core.List<DiagnosticsNodeProto> get children => $_getList(14);
+
+  @$pb.TagNumber(16)
+  $core.String get valueId => $_getSZ(15);
+  @$pb.TagNumber(16)
+  set valueId($core.String v) { $_setString(15, v); }
+  @$pb.TagNumber(16)
+  $core.bool hasValueId() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearValueId() => clearField(16);
+
+  @$pb.TagNumber(17)
+  $core.bool get summaryTree => $_getBF(16);
+  @$pb.TagNumber(17)
+  set summaryTree($core.bool v) { $_setBool(16, v); }
+  @$pb.TagNumber(17)
+  $core.bool hasSummaryTree() => $_has(16);
+  @$pb.TagNumber(17)
+  void clearSummaryTree() => clearField(17);
+
+  @$pb.TagNumber(18)
+  $core.int get locationId => $_getIZ(17);
+  @$pb.TagNumber(18)
+  set locationId($core.int v) { $_setSignedInt32(17, v); }
+  @$pb.TagNumber(18)
+  $core.bool hasLocationId() => $_has(17);
+  @$pb.TagNumber(18)
+  void clearLocationId() => clearField(18);
+
+  @$pb.TagNumber(19)
+  $core.String get creationLocation => $_getSZ(18);
+  @$pb.TagNumber(19)
+  set creationLocation($core.String v) { $_setString(18, v); }
+  @$pb.TagNumber(19)
+  $core.bool hasCreationLocation() => $_has(18);
+  @$pb.TagNumber(19)
+  void clearCreationLocation() => clearField(19);
+
+  @$pb.TagNumber(20)
+  $core.bool get createdByLocalProjet => $_getBF(19);
+  @$pb.TagNumber(20)
+  set createdByLocalProjet($core.bool v) { $_setBool(19, v); }
+  @$pb.TagNumber(20)
+  $core.bool hasCreatedByLocalProjet() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearCreatedByLocalProjet() => clearField(20);
+
+  @$pb.TagNumber(21)
+  $core.String get additionalJson => $_getSZ(20);
+  @$pb.TagNumber(21)
+  set additionalJson($core.String v) { $_setString(20, v); }
+  @$pb.TagNumber(21)
+  $core.bool hasAdditionalJson() => $_has(20);
+  @$pb.TagNumber(21)
+  void clearAdditionalJson() => clearField(21);
 }
 
 

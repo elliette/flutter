@@ -1656,7 +1656,7 @@ abstract class DiagnosticsNode {
 
   @mustCallSuper
   DiagnosticsNodeProto toProto(DiagnosticsSerializationDelegate delegate) {
-    final DiagnosticsNodeProto proto = DiagnosticsNodeProto();
+    DiagnosticsNodeProto proto = DiagnosticsNodeProto();
     proto
       ..hasChildren = getChildren().isNotEmpty
       ..description = toDescription()
@@ -1674,7 +1674,7 @@ abstract class DiagnosticsNode {
       proto.emptyBodyDescription = emptyBodyDescription!;
     }
     if (style != DiagnosticsTreeStyle.sparse) {
-      // proto.style = style
+     proto.style = toProtoStyle(style ?? DiagnosticsTreeStyle.none);
     }
     if (allowTruncate) {
       proto.allowTruncate = allowTruncate;
@@ -1688,8 +1688,17 @@ abstract class DiagnosticsNode {
     if (allowNameWrap) {
       proto.allowNameWrap = allowNameWrap;
     }
+
+    // add additoinal props.
+    proto = delegate.additionalNodePropertiesProto(this, proto);
+
+    // Note: includeProperties is false.
     if (delegate.includeProperties) {
-      // todo
+      final properties =  delegate.filterProperties(getProperties(), this);
+      for (final property in properties) {
+        final propertyProto = property.toProto(delegate);
+        proto.properties.add(propertyProto);
+      }
     }
     if (delegate.subtreeDepth > 0) {
       final children = delegate.filterChildren(getChildren(), this);
@@ -1702,6 +1711,34 @@ abstract class DiagnosticsNode {
     return proto;
   }
 
+  DiagnosticsNodeProto_DiagnosticsTreeStyle toProtoStyle(DiagnosticsTreeStyle style) {
+  switch (style) {
+    case DiagnosticsTreeStyle.none:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.none;
+    case DiagnosticsTreeStyle.sparse:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.sparse;
+    case DiagnosticsTreeStyle.offstage:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.offstage;
+    case DiagnosticsTreeStyle.dense:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.dense;
+    case DiagnosticsTreeStyle.transition:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.transition;
+    case DiagnosticsTreeStyle.error:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.style_error;
+    case DiagnosticsTreeStyle.whitespace:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.whitespace;
+    case DiagnosticsTreeStyle.flat:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.flat;
+    case DiagnosticsTreeStyle.singleLine:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.single_line;
+    case DiagnosticsTreeStyle.errorProperty:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.error_property;
+    case DiagnosticsTreeStyle.shallow:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.shallow;
+    case DiagnosticsTreeStyle.truncateChildren:
+      return DiagnosticsNodeProto_DiagnosticsTreeStyle.truncate_children;
+  }
+}
   /// Serializes a [List] of [DiagnosticsNode]s to a JSON list according to
   /// the configuration provided by the [DiagnosticsSerializationDelegate].
   ///
@@ -3605,6 +3642,9 @@ abstract class DiagnosticsSerializationDelegate {
   /// the serialization.
   Map<String, Object?> additionalNodeProperties(DiagnosticsNode node);
 
+
+  DiagnosticsNodeProto additionalNodePropertiesProto(DiagnosticsNode node, DiagnosticsNodeProto protoNode);
+
   /// Filters the list of [DiagnosticsNode]s that will be included as children
   /// for the given `owner` node.
   ///
@@ -3698,6 +3738,12 @@ class _DefaultDiagnosticsSerializationDelegate implements DiagnosticsSerializati
   Map<String, Object?> additionalNodeProperties(DiagnosticsNode node) {
     return const <String, Object?>{};
   }
+
+  @override
+  DiagnosticsNodeProto additionalNodePropertiesProto(DiagnosticsNode node, DiagnosticsNodeProto proto) {
+    return proto;
+  }
+
 
   @override
   DiagnosticsSerializationDelegate delegateForNode(DiagnosticsNode node) {
