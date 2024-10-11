@@ -1654,6 +1654,7 @@ abstract class DiagnosticsNode {
     return result;
   }
 
+  /// Blah blah blah.
   @mustCallSuper
   DiagnosticsNodeProto toProto(DiagnosticsSerializationDelegate delegate) {
     DiagnosticsNodeProto proto = DiagnosticsNodeProto();

@@ -2245,6 +2245,7 @@ mixin WidgetInspectorService {
     Map<String, String> parameters,
   ) {
     final String? diagnosticableId = parameters['id'];
+    print('Getting layout explorer node with ID: $diagnosticableId');
     final int subtreeDepth = int.parse(parameters['subtreeDepth']!);
     final String? groupName = parameters['groupName'];
     Map<String, dynamic>? result = <String, dynamic>{};

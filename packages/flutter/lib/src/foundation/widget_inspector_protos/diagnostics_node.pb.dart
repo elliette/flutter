@@ -40,6 +40,8 @@ class DiagnosticsNodeProto extends $pb.GeneratedMessage {
     $core.String? creationLocation,
     $core.bool? createdByLocalProjet,
     $core.String? additionalJson,
+    $core.String? widgetRuntimeType,
+    $core.bool? stateful,
   }) {
     final $result = create();
     if (name != null) {
@@ -105,6 +107,12 @@ class DiagnosticsNodeProto extends $pb.GeneratedMessage {
     if (additionalJson != null) {
       $result.additionalJson = additionalJson;
     }
+    if (widgetRuntimeType != null) {
+      $result.widgetRuntimeType = widgetRuntimeType;
+    }
+    if (stateful != null) {
+      $result.stateful = stateful;
+    }
     return $result;
   }
   DiagnosticsNodeProto._() : super();
@@ -133,6 +141,8 @@ class DiagnosticsNodeProto extends $pb.GeneratedMessage {
     ..aOS(19, _omitFieldNames ? '' : 'creationLocation')
     ..aOB(20, _omitFieldNames ? '' : 'createdByLocalProjet')
     ..aOS(21, _omitFieldNames ? '' : 'additionalJson')
+    ..aOS(22, _omitFieldNames ? '' : 'widgetRuntimeType')
+    ..aOB(23, _omitFieldNames ? '' : 'stateful')
     ..hasRequiredFields = false
   ;
 
@@ -333,6 +343,24 @@ class DiagnosticsNodeProto extends $pb.GeneratedMessage {
   $core.bool hasAdditionalJson() => $_has(20);
   @$pb.TagNumber(21)
   void clearAdditionalJson() => clearField(21);
+
+  @$pb.TagNumber(22)
+  $core.String get widgetRuntimeType => $_getSZ(21);
+  @$pb.TagNumber(22)
+  set widgetRuntimeType($core.String v) { $_setString(21, v); }
+  @$pb.TagNumber(22)
+  $core.bool hasWidgetRuntimeType() => $_has(21);
+  @$pb.TagNumber(22)
+  void clearWidgetRuntimeType() => clearField(22);
+
+  @$pb.TagNumber(23)
+  $core.bool get stateful => $_getBF(22);
+  @$pb.TagNumber(23)
+  set stateful($core.bool v) { $_setBool(22, v); }
+  @$pb.TagNumber(23)
+  $core.bool hasStateful() => $_has(22);
+  @$pb.TagNumber(23)
+  void clearStateful() => clearField(23);
 }
 
 

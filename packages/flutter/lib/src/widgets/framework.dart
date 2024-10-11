@@ -15,6 +15,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/src/foundation/widget_inspector_protos/diagnostics_node.pb.dart';
 
 import 'binding.dart';
 import 'debug.dart';
@@ -5395,7 +5396,21 @@ class _ElementDiagnosticableTreeNode extends DiagnosticableTreeNode {
     json['stateful'] = stateful;
     return json;
   }
+
+  @override
+  DiagnosticsNodeProto toProto(DiagnosticsSerializationDelegate delegate) {
+    final proto = super.toProto(delegate);
+    final Element element = value as Element;
+
+    if (!element.debugIsDefunct) {
+        proto.widgetRuntimeType = element.widget.runtimeType.toString();
+    }
+    proto.stateful = stateful;
+    return proto;
 }
+
+}
+
 
 /// Signature for the constructor that is called when an error occurs while
 /// building a widget.
