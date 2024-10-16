@@ -13,6 +13,26 @@ import 'dart:convert' as $convert;
 import 'dart:core' as $core;
 import 'dart:typed_data' as $typed_data;
 
+@$core.Deprecated('Use treeNodeProtoDescriptor instead')
+const TreeNodeProto$json = {
+  '1': 'TreeNodeProto',
+  '2': [
+    {'1': 'value_id', '3': 1, '4': 1, '5': 9, '10': 'valueId'},
+    {'1': 'description', '3': 2, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'widget_runtime_type', '3': 3, '4': 1, '5': 9, '10': 'widgetRuntimeType'},
+    {'1': 'created_by_local_project', '3': 4, '4': 1, '5': 8, '10': 'createdByLocalProject'},
+    {'1': 'children', '3': 5, '4': 3, '5': 11, '6': '.widget_inspector_protos.TreeNodeProto', '10': 'children'},
+  ],
+};
+
+/// Descriptor for `TreeNodeProto`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List treeNodeProtoDescriptor = $convert.base64Decode(
+    'Cg1UcmVlTm9kZVByb3RvEhkKCHZhbHVlX2lkGAEgASgJUgd2YWx1ZUlkEiAKC2Rlc2NyaXB0aW'
+    '9uGAIgASgJUgtkZXNjcmlwdGlvbhIuChN3aWRnZXRfcnVudGltZV90eXBlGAMgASgJUhF3aWRn'
+    'ZXRSdW50aW1lVHlwZRI3ChhjcmVhdGVkX2J5X2xvY2FsX3Byb2plY3QYBCABKAhSFWNyZWF0ZW'
+    'RCeUxvY2FsUHJvamVjdBJCCghjaGlsZHJlbhgFIAMoCzImLndpZGdldF9pbnNwZWN0b3JfcHJv'
+    'dG9zLlRyZWVOb2RlUHJvdG9SCGNoaWxkcmVu');
+
 @$core.Deprecated('Use diagnosticsNodeProtoDescriptor instead')
 const DiagnosticsNodeProto$json = {
   '1': 'DiagnosticsNodeProto',

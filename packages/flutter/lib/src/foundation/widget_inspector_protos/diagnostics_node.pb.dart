@@ -17,6 +17,106 @@ import 'diagnostics_node.pbenum.dart';
 
 export 'diagnostics_node.pbenum.dart';
 
+class TreeNodeProto extends $pb.GeneratedMessage {
+  factory TreeNodeProto({
+    $core.String? valueId,
+    $core.String? description,
+    $core.String? widgetRuntimeType,
+    $core.bool? createdByLocalProject,
+    $core.Iterable<TreeNodeProto>? children,
+  }) {
+    final $result = create();
+    if (valueId != null) {
+      $result.valueId = valueId;
+    }
+    if (description != null) {
+      $result.description = description;
+    }
+    if (widgetRuntimeType != null) {
+      $result.widgetRuntimeType = widgetRuntimeType;
+    }
+    if (createdByLocalProject != null) {
+      $result.createdByLocalProject = createdByLocalProject;
+    }
+    if (children != null) {
+      $result.children.addAll(children);
+    }
+    return $result;
+  }
+  TreeNodeProto._() : super();
+  factory TreeNodeProto.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory TreeNodeProto.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'TreeNodeProto', package: const $pb.PackageName(_omitMessageNames ? '' : 'widget_inspector_protos'), createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'valueId')
+    ..aOS(2, _omitFieldNames ? '' : 'description')
+    ..aOS(3, _omitFieldNames ? '' : 'widgetRuntimeType')
+    ..aOB(4, _omitFieldNames ? '' : 'createdByLocalProject')
+    ..pc<TreeNodeProto>(5, _omitFieldNames ? '' : 'children', $pb.PbFieldType.PM, subBuilder: TreeNodeProto.create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  TreeNodeProto clone() => TreeNodeProto()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  TreeNodeProto copyWith(void Function(TreeNodeProto) updates) => super.copyWith((message) => updates(message as TreeNodeProto)) as TreeNodeProto;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TreeNodeProto create() => TreeNodeProto._();
+  TreeNodeProto createEmptyInstance() => create();
+  static $pb.PbList<TreeNodeProto> createRepeated() => $pb.PbList<TreeNodeProto>();
+  @$core.pragma('dart2js:noInline')
+  static TreeNodeProto getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TreeNodeProto>(create);
+  static TreeNodeProto? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get valueId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set valueId($core.String v) { $_setString(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasValueId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearValueId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get description => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set description($core.String v) { $_setString(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasDescription() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDescription() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get widgetRuntimeType => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set widgetRuntimeType($core.String v) { $_setString(2, v); }
+  @$pb.TagNumber(3)
+  $core.bool hasWidgetRuntimeType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearWidgetRuntimeType() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get createdByLocalProject => $_getBF(3);
+  @$pb.TagNumber(4)
+  set createdByLocalProject($core.bool v) { $_setBool(3, v); }
+  @$pb.TagNumber(4)
+  $core.bool hasCreatedByLocalProject() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCreatedByLocalProject() => clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.List<TreeNodeProto> get children => $_getList(4);
+}
+
 class DiagnosticsNodeProto extends $pb.GeneratedMessage {
   factory DiagnosticsNodeProto({
     $core.String? name,

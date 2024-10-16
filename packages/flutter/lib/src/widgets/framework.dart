@@ -5398,16 +5398,15 @@ class _ElementDiagnosticableTreeNode extends DiagnosticableTreeNode {
   }
 
   @override
-  DiagnosticsNodeProto toProto(DiagnosticsSerializationDelegate delegate) {
+  TreeNodeProto toProto(DiagnosticsSerializationDelegate delegate) {
     final proto = super.toProto(delegate);
     final Element element = value as Element;
 
     if (!element.debugIsDefunct) {
         proto.widgetRuntimeType = element.widget.runtimeType.toString();
     }
-    proto.stateful = stateful;
     return proto;
-}
+  }
 
 }
 

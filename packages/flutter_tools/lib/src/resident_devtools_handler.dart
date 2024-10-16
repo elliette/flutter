@@ -194,6 +194,13 @@ class FlutterResidentDevtoolsHandler implements ResidentDevtoolsHandler {
     ]);
   }
 
+  void _blah(List<FlutterDevice?> flutterDevices) {
+      for (final FlutterDevice? device in flutterDevices)
+        if (device?.vmService != null) {
+         //  device?.vmService.
+        }
+  }
+
   Future<void> _callDevToolsUriExtension(
     FlutterDevice device,
   ) async {

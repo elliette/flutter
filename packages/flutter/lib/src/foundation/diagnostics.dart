@@ -1656,51 +1656,12 @@ abstract class DiagnosticsNode {
 
   /// Blah blah blah.
   @mustCallSuper
-  DiagnosticsNodeProto toProto(DiagnosticsSerializationDelegate delegate) {
-    DiagnosticsNodeProto proto = DiagnosticsNodeProto();
-    proto
-      ..hasChildren = getChildren().isNotEmpty
-      ..description = toDescription()
-      ..type = runtimeType.toString();
-    if (name != null) {
-      proto.name = name!;
-    }
-    if (!showSeparator) {
-      proto.showSeparator = showSeparator;
-    }
-    if (!showName) {
-      proto.showName = showName;
-    }
-    if (emptyBodyDescription != null) {
-      proto.emptyBodyDescription = emptyBodyDescription!;
-    }
-    if (style != DiagnosticsTreeStyle.sparse) {
-     proto.style = toProtoStyle(style ?? DiagnosticsTreeStyle.none);
-    }
-    if (allowTruncate) {
-      proto.allowTruncate = allowTruncate;
-    }
-    if (linePrefix?.isNotEmpty ?? false) {
-      proto.linePrefix = linePrefix!;
-    }
-    if (!allowWrap) {
-      proto.allowWrap = allowWrap;
-    }
-    if (allowNameWrap) {
-      proto.allowNameWrap = allowNameWrap;
-    }
+  TreeNodeProto toProto(DiagnosticsSerializationDelegate delegate) {
+    TreeNodeProto proto = TreeNodeProto();
+    proto.description = toDescription();
 
-    // add additoinal props.
     proto = delegate.additionalNodePropertiesProto(this, proto);
 
-    // Note: includeProperties is false.
-    if (delegate.includeProperties) {
-      final properties =  delegate.filterProperties(getProperties(), this);
-      for (final property in properties) {
-        final propertyProto = property.toProto(delegate);
-        proto.properties.add(propertyProto);
-      }
-    }
     if (delegate.subtreeDepth > 0) {
       final children = delegate.filterChildren(getChildren(), this);
       for (final child in children) {
@@ -3644,7 +3605,7 @@ abstract class DiagnosticsSerializationDelegate {
   Map<String, Object?> additionalNodeProperties(DiagnosticsNode node);
 
 
-  DiagnosticsNodeProto additionalNodePropertiesProto(DiagnosticsNode node, DiagnosticsNodeProto protoNode);
+  TreeNodeProto additionalNodePropertiesProto(DiagnosticsNode node, TreeNodeProto protoNode);
 
   /// Filters the list of [DiagnosticsNode]s that will be included as children
   /// for the given `owner` node.
@@ -3741,7 +3702,7 @@ class _DefaultDiagnosticsSerializationDelegate implements DiagnosticsSerializati
   }
 
   @override
-  DiagnosticsNodeProto additionalNodePropertiesProto(DiagnosticsNode node, DiagnosticsNodeProto proto) {
+  TreeNodeProto additionalNodePropertiesProto(DiagnosticsNode node, TreeNodeProto proto) {
     return proto;
   }
 

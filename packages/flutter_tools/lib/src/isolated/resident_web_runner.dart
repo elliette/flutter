@@ -11,6 +11,8 @@ import 'package:vm_service/vm_service.dart' as vmservice;
 import 'package:webkit_inspection_protocol/webkit_inspection_protocol.dart'
     hide StackTrace;
 
+import 'dart:developer' as developer;
+
 import '../application_package.dart';
 import '../base/async_guard.dart';
 import '../base/common.dart';
@@ -411,6 +413,7 @@ Please provide a valid TCP port (an integer between 0 and 65535, inclusive).
     String? reason,
     bool benchmarkMode = false,
   }) async {
+    print('EXTENSION STREAM HAS LISTENER? ${developer.extensionStreamHasListener}');
     final DateTime start = _systemClock.now();
     final Status status = _logger.startProgress(
       'Performing hot restart...',

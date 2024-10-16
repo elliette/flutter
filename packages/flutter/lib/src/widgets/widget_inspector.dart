@@ -1745,7 +1745,7 @@ mixin WidgetInspectorService {
     DiagnosticsNode? node,
     InspectorSerializationDelegate delegate,
   ) {
-    final DiagnosticsNodeProto? proto = node?.toProto(delegate);
+    final TreeNodeProto? proto = node?.toProto(delegate);
     if (proto == null) {
       return null;
     }
@@ -3901,29 +3901,19 @@ class InspectorSerializationDelegate implements DiagnosticsSerializationDelegate
   }
 
   @override
-  DiagnosticsNodeProto additionalNodePropertiesProto(DiagnosticsNode node, DiagnosticsNodeProto protoNode) {
+  TreeNodeProto additionalNodePropertiesProto(DiagnosticsNode node, TreeNodeProto protoNode) {
     final Object? value = node.value;
     final valueId = service.toId(value, groupName!);
     if (_interactive && valueId != null) {
       protoNode.valueId = valueId;
     }
-    if (summaryTree) {
-      protoNode.summaryTree = true;
-    }
     final _Location? creationLocation = _getCreationLocation(value);
     if (creationLocation != null) {
-      protoNode.locationId =  _toLocationId(creationLocation);
-      // todo:
-      // result['creationLocation'] = creationLocation.toJsonMap();
       if (service._isLocalCreationLocation(creationLocation.file)) {
         _nodesCreatedByLocalProject.add(node);
-        protoNode.createdByLocalProjet = true;
+        protoNode.createdByLocalProject = true;
       }
     }
-    // todo:
-    // if (addAdditionalPropertiesCallback != null) {
-    //   result.addAll(addAdditionalPropertiesCallback!(node, this) ?? <String, Object>{});
-    // }
     return protoNode;
   }
 

@@ -10,6 +10,8 @@ import 'package:pool/pool.dart';
 import 'package:unified_analytics/unified_analytics.dart';
 import 'package:vm_service/vm_service.dart' as vm_service;
 
+import 'dart:developer' as developer;
+
 import 'base/context.dart';
 import 'base/file_system.dart';
 import 'base/logger.dart';
@@ -793,15 +795,37 @@ class HotRunner extends ResidentRunner {
       pause: pause,
     );
     if (result.isOk) {
+
+      print('RELOAD IS COMPLETE!!!');
+      print('developer post event is ${developer.postEvent}');
+      print(
+          'extension stream has listener? ${developer.extensionStreamHasListener}');
+      developer.postEvent('Flutter.ReloadComplete', <String, dynamic>{});
+      print('called post event');
+
+      final Map<FlutterDevice?, List<FlutterView>> viewCache =
+          <FlutterDevice?, List<FlutterView>>{};
+      for (final FlutterDevice? device in flutterDevices) {
+        final List<FlutterView> views =
+            await device!.vmService!.getFlutterViews();
+        viewCache[device] = views;
+        for (final FlutterView view in views) {
+          await device.vmService!
+              .flutterHotReload(isolateId: view.uiIsolate!.id!);
+        }
+      }
+
+      // elliott -  where reload completed is logged.
       final String elapsed = getElapsedAsMilliseconds(timer.elapsed);
       if (!silent) {
         if (result.extraTimings.isNotEmpty) {
           final String extraTimingsString = result.extraTimings
             .map((OperationResultExtraTiming e) => '${e.description}: ${e.timeInMs} ms')
             .join(', ');
-          globals.printStatus('${result.message} in $elapsed ($extraTimingsString).');
+          globals.printStatus(
+              '${result.message} in :) $elapsed ($extraTimingsString).');
         } else {
-          globals.printStatus('${result.message} in $elapsed.');
+          globals.printStatus('${result.message} in :) $elapsed.');
         }
       }
     }
@@ -906,7 +930,7 @@ class HotRunner extends ResidentRunner {
     bool? pause,
   }) async {
     Status status = globals.logger.startProgress(
-      'Performing hot reload...',
+      ':) Performing hot reload...',
       progressId: 'hot.reload',
     );
     OperationResult result;

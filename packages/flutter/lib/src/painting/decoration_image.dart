@@ -671,6 +671,13 @@ void paintImage({
               imageSizeInfo.source!: imageSizeInfo.toJson(),
           },
         );
+        developer.postEvent(
+          'Flutter.FunEvent',
+          <String, Object>{
+            for (final ImageSizeInfo imageSizeInfo in _pendingImageSizeInfo.values)
+              imageSizeInfo.source!: imageSizeInfo.toJson(),
+          },
+        );
         _pendingImageSizeInfo = <String, ImageSizeInfo>{};
       }, debugLabel: 'paintImage.recordImageSizes');
     }

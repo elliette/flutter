@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:vm_service/vm_service.dart' as vm_service;
+import 'package:vm_service/vm_service.dart';
 
 import 'base/common.dart';
 import 'base/context.dart';
@@ -311,7 +312,11 @@ Future<vm_service.VmService> setUpVmService({
   }
 
   if (printStructuredErrorLogMethod != null) {
-    vmService.onExtensionEvent.listen(printStructuredErrorLogMethod);
+    // vmService.onExtensionEvent.listen((Event event) {
+    //   printStructuredErrorLogMethod(event);
+
+    //   print(':) FLUTTER TOOLS RECEIVED EXTENSION EVENT: ${event.extensionKind}');
+    // });
     registrationRequests.add(vmService
       .streamListen(vm_service.EventStreams.kExtension)
       .then<vm_service.Success?>(
@@ -748,6 +753,15 @@ class FlutterVmService {
   }) {
     return invokeFlutterExtensionRpcRaw(
       'ext.flutter.reassemble',
+      isolateId: isolateId,
+    );
+  }
+
+  Future<Map<String, Object?>?> flutterHotReload({
+    required String isolateId,
+  }) {
+    return invokeFlutterExtensionRpcRaw(
+      'ext.flutter.hotReload',
       isolateId: isolateId,
     );
   }
