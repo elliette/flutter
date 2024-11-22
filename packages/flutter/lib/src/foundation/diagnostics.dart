@@ -1604,8 +1604,9 @@ abstract class DiagnosticsNode {
   ///  * [WidgetInspectorService], which forms the bridge between JSON returned
   ///    by this method and interactive tree views in the Flutter IntelliJ
   ///    plugin.
+  /*
   @mustCallSuper
-  Map<String, Object?> toJsonMap(
+  Map<String, Object?> toJsonMapOld(
     DiagnosticsSerializationDelegate delegate, {
     bool fullDetails = true,
   }) {
@@ -1663,6 +1664,113 @@ abstract class DiagnosticsNode {
     }());
     return result;
   }
+  */
+
+  /// Serialize the node to a JSON map according to the configuration provided
+  /// in the [DiagnosticsSerializationDelegate].
+  ///
+  /// Subclasses should override if they have additional properties that are
+  /// useful for the GUI tools that consume this JSON.
+  ///
+  /// See also:
+  ///
+  ///  * [WidgetInspectorService], which forms the bridge between JSON returned
+  ///    by this method and interactive tree views in the Flutter IntelliJ
+  ///    plugin.
+  @mustCallSuper
+  Map<String, Object?> toJsonMap(
+    DiagnosticsSerializationDelegate delegate, {
+    bool fullDetails = true,
+  }) {
+    // Stack containing the JSON list to add the processed node to, and the node to process.
+    final List<(List<Map<String, Object?>>, DiagnosticsNode)> childrenToProcessStack = <(List<Map<String, Object?>>, DiagnosticsNode)>[];
+        // Stack containing the JSON list to add the processed node to, and the node to process.
+    final List<(List<Map<String, Object?>>, DiagnosticsNode)> propertiesToProcessStack = <(List<Map<String, Object?>>, DiagnosticsNode)>[];
+    Map<String, Object?> result = <String, Object?>{};
+
+    assert(() {
+      result = _toJson(delegate, fullDetails: fullDetails, childrenToProcessStack: childrenToProcessStack, propertiesToProcessStack: propertiesToProcessStack);
+      while(childrenToProcessStack.isNotEmpty) {
+        final (childrenList, nextNodeToProcess) = childrenToProcessStack.removeAt(0);
+        final nextNodeAsJson = nextNodeToProcess._toJson(delegate, childrenToProcessStack: childrenToProcessStack, propertiesToProcessStack: propertiesToProcessStack, fullDetails: fullDetails);
+        childrenList.add(nextNodeAsJson);
+      }
+
+      while(propertiesToProcessStack.isNotEmpty) {
+        final (propertiesList, nextPropertyToProcess) = propertiesToProcessStack.removeAt(0);
+        final nextPropertyAsJson = nextPropertyToProcess._toJson(delegate, childrenToProcessStack: childrenToProcessStack, propertiesToProcessStack: propertiesToProcessStack, fullDetails: fullDetails);
+        propertiesList.add(nextPropertyAsJson);
+      }
+
+      return true;
+    }());
+    return result;
+  }
+
+  Map<String, Object?> _toJson(
+    DiagnosticsSerializationDelegate delegate, {
+    required List<(List<Map<String, Object?>>, DiagnosticsNode)> childrenToProcessStack,
+    required List<(List<Map<String, Object?>>, DiagnosticsNode)> propertiesToProcessStack,
+    bool fullDetails = true,
+  }) {
+    final description = toDescription();
+    final childrenJsonList = <Map<String, Object?>>[];
+    final bool hasChildren = getChildren().isNotEmpty;
+
+    // Collect the children to process later:
+    if (hasChildren && delegate.subtreeDepth > 0) {
+      final childrenNodes = maybeTruncateNodesList(
+        delegate.filterChildren(getChildren(), this),
+        this,
+        delegate,
+        fullDetails: fullDetails,
+      );
+      for (final child in childrenNodes) {
+        childrenToProcessStack.add((childrenJsonList, child));
+      }
+    }
+
+    final Map<String, Object?> essentialDetails = <String, Object?>{
+      'description': description,
+      'shouldIndent': style != DiagnosticsTreeStyle.flat &&
+          style != DiagnosticsTreeStyle.error,
+      ...delegate.additionalNodeProperties(this, fullDetails: fullDetails),
+      if (description == '...')
+        'truncated': true,
+      if (hasChildren)
+        'children': childrenJsonList,
+    };
+
+    final propertiesJsonList = <Map<String, Object?>>[];
+    if (fullDetails && delegate.includeProperties) {
+      final propertyNodes = delegate.filterProperties(getProperties(), this);
+      for (final property in propertyNodes) {
+        propertiesToProcessStack.add((propertiesJsonList, property));
+      }
+
+    }
+
+    return !fullDetails
+        ? essentialDetails
+        : <String, Object?>{
+            ...essentialDetails,
+            'type': runtimeType.toString(),
+            if (name != null) 'name': name,
+            if (!showSeparator) 'showSeparator': showSeparator,
+            if (level != DiagnosticLevel.info) 'level': level.name,
+            if (!showName) 'showName': showName,
+            if (emptyBodyDescription != null)
+              'emptyBodyDescription': emptyBodyDescription,
+            if (style != DiagnosticsTreeStyle.sparse) 'style': style!.name,
+            if (allowTruncate) 'allowTruncate': allowTruncate,
+            if (hasChildren) 'hasChildren': hasChildren,
+            if (linePrefix?.isNotEmpty ?? false) 'linePrefix': linePrefix,
+            if (!allowWrap) 'allowWrap': allowWrap,
+            if (allowNameWrap) 'allowNameWrap': allowNameWrap,
+            if (delegate.includeProperties)
+              'properties': propertiesJsonList,
+          };
+  }
 
   /// Serializes a [List] of [DiagnosticsNode]s to a JSON list according to
   /// the configuration provided by the [DiagnosticsSerializationDelegate].
@@ -1695,6 +1803,28 @@ abstract class DiagnosticsNode {
       json.last['truncated'] = true;
     }
     return json;
+  }
+
+  /// Serializes a [List] of [DiagnosticsNode]s to a JSON list according to
+  /// the configuration provided by the [DiagnosticsSerializationDelegate].
+  ///
+  /// The provided `nodes` may be properties or children of the `parent`
+  /// [DiagnosticsNode].
+  static List<DiagnosticsNode> maybeTruncateNodesList(
+    List<DiagnosticsNode>? nodes,
+    DiagnosticsNode? parent,
+    DiagnosticsSerializationDelegate delegate, {
+    bool fullDetails = true,
+  }) {
+    if (nodes == null) {
+      return const <DiagnosticsNode>[];
+    }
+    final int originalNodeCount = nodes.length;
+    nodes = delegate.truncateNodesList(nodes, parent);
+    if (nodes.length != originalNodeCount) {
+      nodes.add(DiagnosticsNode.message('...'));
+    }
+    return nodes;
   }
 
   /// Returns a string representation of this diagnostic that is compatible with
@@ -2634,12 +2764,16 @@ class DiagnosticsProperty<T> extends DiagnosticsNode {
     if (delegate.expandPropertyValues && delegate.includeProperties && v is Diagnosticable && getProperties().isEmpty) {
       // Exclude children for expanded nodes to avoid cycles.
       delegate = delegate.copyWith(subtreeDepth: 0, includeProperties: false);
-      properties = DiagnosticsNode.toJsonList(
-        delegate.filterProperties(v.toDiagnosticsNode().getProperties(), this),
-        this,
-        delegate,
-        fullDetails: fullDetails,
-      );
+      final propertyNodes = delegate.filterProperties(v.toDiagnosticsNode().getProperties(), this);
+
+     properties = propertyNodes.map((node) => node.toJsonMap(delegate, fullDetails: fullDetails)).toList();
+
+      // properties = DiagnosticsNode.toJsonList(
+      //   delegate.filterProperties(v.toDiagnosticsNode().getProperties(), this),
+      //   this,
+      //   delegate,
+      //   fullDetails: fullDetails,
+      // );
     }
     final Map<String, Object?> json = super.toJsonMap(
       delegate,
