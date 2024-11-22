@@ -2737,13 +2737,6 @@ class DiagnosticsProperty<T> extends DiagnosticsNode {
           .map((DiagnosticsNode node) =>
               node.toJsonMap(delegate, fullDetails: fullDetails))
           .toList();
-
-      // properties = DiagnosticsNode.toJsonList(
-      //   delegate.filterProperties(v.toDiagnosticsNode().getProperties(), this),
-      //   this,
-      //   delegate,
-      //   fullDetails: fullDetails,
-      // );
     }
     final Map<String, Object?> json = super.toJsonMap(
       delegate,

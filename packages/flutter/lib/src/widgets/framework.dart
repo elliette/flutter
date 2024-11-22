@@ -5386,8 +5386,8 @@ class _ElementDiagnosticableTreeNode extends DiagnosticableTreeNode {
     DiagnosticsSerializationDelegate delegate, {
     bool fullDetails = true,
   }) {
-    // print('IN HERE, THIS IS WHERE widgetRuntimeType IS ADDED.');
-    // print(StackTrace.current);
+    // Note: This is where widgetRuntimeType is added.
+    // TODO: Figure out why this no longer being called.
     final Map<String, Object?> json = super.toJsonMap(delegate, fullDetails: fullDetails,);
     final Element element = value as Element;
     if (!element.debugIsDefunct) {
