@@ -1743,39 +1743,6 @@ abstract class DiagnosticsNode {
   ///
   /// The provided `nodes` may be properties or children of the `parent`
   /// [DiagnosticsNode].
-  static List<Map<String, Object?>> toJsonList(
-    List<DiagnosticsNode>? nodes,
-    DiagnosticsNode? parent,
-    DiagnosticsSerializationDelegate delegate, {
-    bool fullDetails = true,
-  }) {
-    bool truncated = false;
-    if (nodes == null) {
-      return const <Map<String, Object?>>[];
-    }
-    final int originalNodeCount = nodes.length;
-    nodes = delegate.truncateNodesList(nodes, parent);
-    if (nodes.length != originalNodeCount) {
-      nodes.add(DiagnosticsNode.message('...'));
-      truncated = true;
-    }
-    final List<Map<String, Object?>> json = nodes.map<Map<String, Object?>>((DiagnosticsNode node) {
-      return node.toJsonMap(
-        delegate.delegateForNode(node),
-        fullDetails: fullDetails,
-      );
-    }).toList();
-    if (truncated) {
-      json.last['truncated'] = true;
-    }
-    return json;
-  }
-
-  /// Serializes a [List] of [DiagnosticsNode]s to a JSON list according to
-  /// the configuration provided by the [DiagnosticsSerializationDelegate].
-  ///
-  /// The provided `nodes` may be properties or children of the `parent`
-  /// [DiagnosticsNode].
   static List<DiagnosticsNode> maybeTruncateNodesList(
     List<DiagnosticsNode>? nodes,
     DiagnosticsNode? parent,

@@ -1805,14 +1805,20 @@ mixin WidgetInspectorService {
     required DiagnosticsNode? parent,
     bool fullDetails = true,
   }) {
-    final truncatedNodes = DiagnosticsNode.maybeTruncateNodesList(
+    final List<DiagnosticsNode> truncatedNodes =
+        DiagnosticsNode.maybeTruncateNodesList(
       nodes,
       parent,
       delegate,
       fullDetails: fullDetails,
     );
 
-    return truncatedNodes.map((node) => node.toJsonMap(delegate, fullDetails: fullDetails)).toList();
+    return truncatedNodes
+        .map((DiagnosticsNode node) => node.toJsonMap(
+              delegate,
+              fullDetails: fullDetails,
+            ))
+        .toList();
   }
 
   /// Returns a JSON representation of the properties of the [DiagnosticsNode]
