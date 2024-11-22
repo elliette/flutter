@@ -1421,6 +1421,17 @@ class TextTreeRenderer {
   }
 }
 
+/// The JSON representation of a [DiagnosticsNode].
+typedef _JsonDiagnosticsNode = Map<String, Object?>;
+
+/// Stack containing [DiagnosticNode]s to convert to JSON and the corresponding
+/// JSON list to add them to.
+///
+/// Using a stack is required to process the widget tree iteratively instead of
+/// recursively.
+typedef _NodesToJsonifyStack
+    = List<(DiagnosticsNode, List<_JsonDiagnosticsNode>)>;
+
 /// Defines diagnostics data for a [value].
 ///
 /// For debug and profile modes, [DiagnosticsNode] provides a high quality
@@ -1604,129 +1615,82 @@ abstract class DiagnosticsNode {
   ///  * [WidgetInspectorService], which forms the bridge between JSON returned
   ///    by this method and interactive tree views in the Flutter IntelliJ
   ///    plugin.
-  /*
-  @mustCallSuper
-  Map<String, Object?> toJsonMapOld(
-    DiagnosticsSerializationDelegate delegate, {
-    bool fullDetails = true,
-  }) {
-    Map<String, Object?> result = <String, Object?>{};
-    assert(() {
-      final bool hasChildren = getChildren().isNotEmpty;
-      final Map<String, Object?> essentialDetails = <String, Object?>{
-        'description': toDescription(),
-        'shouldIndent': style != DiagnosticsTreeStyle.flat &&
-            style != DiagnosticsTreeStyle.error,
-        ...delegate.additionalNodeProperties(this, fullDetails: fullDetails),
-        if (delegate.subtreeDepth > 0)
-          'children': toJsonList(
-            delegate.filterChildren(getChildren(), this),
-            this,
-            delegate,
-            fullDetails: fullDetails,
-          ),
-      };
-
-      result = !fullDetails ? essentialDetails : <String, Object?>{
-        ...essentialDetails,
-        'type': runtimeType.toString(),
-        if (name != null)
-          'name': name,
-        if (!showSeparator)
-          'showSeparator': showSeparator,
-        if (level != DiagnosticLevel.info)
-          'level': level.name,
-        if (!showName)
-          'showName': showName,
-        if (emptyBodyDescription != null)
-          'emptyBodyDescription': emptyBodyDescription,
-        if (style != DiagnosticsTreeStyle.sparse)
-          'style': style!.name,
-        if (allowTruncate)
-          'allowTruncate': allowTruncate,
-        if (hasChildren)
-          'hasChildren': hasChildren,
-        if (linePrefix?.isNotEmpty ?? false)
-          'linePrefix': linePrefix,
-        if (!allowWrap)
-          'allowWrap': allowWrap,
-        if (allowNameWrap)
-          'allowNameWrap': allowNameWrap,
-        if (delegate.includeProperties)
-          'properties': toJsonList(
-            delegate.filterProperties(getProperties(), this),
-            this,
-            delegate,
-            fullDetails: fullDetails,
-          ),
-      };
-      return true;
-    }());
-    return result;
-  }
-  */
-
-  /// Serialize the node to a JSON map according to the configuration provided
-  /// in the [DiagnosticsSerializationDelegate].
-  ///
-  /// Subclasses should override if they have additional properties that are
-  /// useful for the GUI tools that consume this JSON.
-  ///
-  /// See also:
-  ///
-  ///  * [WidgetInspectorService], which forms the bridge between JSON returned
-  ///    by this method and interactive tree views in the Flutter IntelliJ
-  ///    plugin.
   @mustCallSuper
   Map<String, Object?> toJsonMap(
     DiagnosticsSerializationDelegate delegate, {
     bool fullDetails = true,
   }) {
-    // Stack containing the JSON list to add the processed node to, and the node to process.
-    final List<(List<Map<String, Object?>>, DiagnosticsNode)> childrenToProcessStack = <(List<Map<String, Object?>>, DiagnosticsNode)>[];
-        // Stack containing the JSON list to add the processed node to, and the node to process.
-    final List<(List<Map<String, Object?>>, DiagnosticsNode)> propertiesToProcessStack = <(List<Map<String, Object?>>, DiagnosticsNode)>[];
-    Map<String, Object?> result = <String, Object?>{};
+    final _NodesToJsonifyStack childrenToJsonify =
+        <(DiagnosticsNode, List<_JsonDiagnosticsNode>)>[];
+    final _NodesToJsonifyStack propertiesToJsonify =
+        <(DiagnosticsNode, List<_JsonDiagnosticsNode>)>[];
+    _JsonDiagnosticsNode result = <String, Object?>{};
 
     assert(() {
-      result = _toJson(delegate, fullDetails: fullDetails, childrenToProcessStack: childrenToProcessStack, propertiesToProcessStack: propertiesToProcessStack);
-      while(childrenToProcessStack.isNotEmpty) {
-        final (childrenList, nextNodeToProcess) = childrenToProcessStack.removeAt(0);
-        final nextNodeAsJson = nextNodeToProcess._toJson(delegate, childrenToProcessStack: childrenToProcessStack, propertiesToProcessStack: propertiesToProcessStack, fullDetails: fullDetails);
-        childrenList.add(nextNodeAsJson);
-      }
-
-      while(propertiesToProcessStack.isNotEmpty) {
-        final (propertiesList, nextPropertyToProcess) = propertiesToProcessStack.removeAt(0);
-        final nextPropertyAsJson = nextPropertyToProcess._toJson(delegate, childrenToProcessStack: childrenToProcessStack, propertiesToProcessStack: propertiesToProcessStack, fullDetails: fullDetails);
-        propertiesList.add(nextPropertyAsJson);
-      }
-
+      result = _toJson(
+        delegate,
+        fullDetails: fullDetails,
+        childrenToJsonify: childrenToJsonify,
+        propertiesToJsonify: propertiesToJsonify,
+      );
+      _jsonifyNextNodesInStack(
+        childrenToJsonify,
+        delegate: delegate,
+        fullDetails: fullDetails,
+        propertiesToJsonify: propertiesToJsonify,
+      );
+      _jsonifyNextNodesInStack(
+        propertiesToJsonify,
+        delegate: delegate,
+        fullDetails: fullDetails,
+        childrenToJsonify: childrenToJsonify,
+      );
       return true;
     }());
     return result;
   }
 
+  void _jsonifyNextNodesInStack(
+    _NodesToJsonifyStack toJsonify, {
+    required DiagnosticsSerializationDelegate delegate,
+    bool fullDetails = true,
+    _NodesToJsonifyStack? childrenToJsonify,
+    _NodesToJsonifyStack? propertiesToJsonify,
+  }) {
+    while (toJsonify.isNotEmpty) {
+      final (DiagnosticsNode nextNode, List<_JsonDiagnosticsNode> jsonList) =
+          toJsonify.removeAt(0);
+      final _JsonDiagnosticsNode nodeAsJson = nextNode._toJson(
+        delegate,
+        childrenToJsonify: childrenToJsonify ?? toJsonify,
+        propertiesToJsonify: propertiesToJsonify ?? toJsonify,
+        fullDetails: fullDetails,
+      );
+      jsonList.add(nodeAsJson);
+    }
+  }
+
   Map<String, Object?> _toJson(
     DiagnosticsSerializationDelegate delegate, {
-    required List<(List<Map<String, Object?>>, DiagnosticsNode)> childrenToProcessStack,
-    required List<(List<Map<String, Object?>>, DiagnosticsNode)> propertiesToProcessStack,
+    required _NodesToJsonifyStack childrenToJsonify,
+    required _NodesToJsonifyStack propertiesToJsonify,
     bool fullDetails = true,
   }) {
-    final description = toDescription();
-    final childrenJsonList = <Map<String, Object?>>[];
+    final String description = toDescription();
+    final List<_JsonDiagnosticsNode> childrenJsonList =
+        <_JsonDiagnosticsNode>[];
     final bool hasChildren = getChildren().isNotEmpty;
 
-    // Collect the children to process later:
+    // Collect the children to convert to JSON later:
     if (hasChildren && delegate.subtreeDepth > 0) {
-      final childrenNodes = maybeTruncateNodesList(
+      final List<DiagnosticsNode> childrenNodes = maybeTruncateNodesList(
         delegate.filterChildren(getChildren(), this),
         this,
         delegate,
         fullDetails: fullDetails,
       );
-      for (final child in childrenNodes) {
-        childrenToProcessStack.add((childrenJsonList, child));
+      for (final DiagnosticsNode child in childrenNodes) {
+        childrenToJsonify.add((child, childrenJsonList));
       }
     }
 
@@ -1741,13 +1705,15 @@ abstract class DiagnosticsNode {
         'children': childrenJsonList,
     };
 
-    final propertiesJsonList = <Map<String, Object?>>[];
+    // Collect the properties to convert to JSON later:
+    final List<_JsonDiagnosticsNode> propertiesJsonList =
+        <Map<String, Object?>>[];
     if (fullDetails && delegate.includeProperties) {
-      final propertyNodes = delegate.filterProperties(getProperties(), this);
-      for (final property in propertyNodes) {
-        propertiesToProcessStack.add((propertiesJsonList, property));
+      final List<DiagnosticsNode> propertyNodes =
+          delegate.filterProperties(getProperties(), this);
+      for (final DiagnosticsNode property in propertyNodes) {
+        propertiesToJsonify.add((property, propertiesJsonList));
       }
-
     }
 
     return !fullDetails
@@ -2764,9 +2730,13 @@ class DiagnosticsProperty<T> extends DiagnosticsNode {
     if (delegate.expandPropertyValues && delegate.includeProperties && v is Diagnosticable && getProperties().isEmpty) {
       // Exclude children for expanded nodes to avoid cycles.
       delegate = delegate.copyWith(subtreeDepth: 0, includeProperties: false);
-      final propertyNodes = delegate.filterProperties(v.toDiagnosticsNode().getProperties(), this);
+      final List<DiagnosticsNode> propertyNodes = delegate.filterProperties(
+          v.toDiagnosticsNode().getProperties(), this);
 
-     properties = propertyNodes.map((node) => node.toJsonMap(delegate, fullDetails: fullDetails)).toList();
+      properties = propertyNodes
+          .map((DiagnosticsNode node) =>
+              node.toJsonMap(delegate, fullDetails: fullDetails))
+          .toList();
 
       // properties = DiagnosticsNode.toJsonList(
       //   delegate.filterProperties(v.toDiagnosticsNode().getProperties(), this),
