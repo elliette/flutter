@@ -1424,13 +1424,13 @@ class TextTreeRenderer {
 /// The JSON representation of a [DiagnosticsNode].
 typedef _JsonDiagnosticsNode = Map<String, Object?>;
 
-/// Stack containing [DiagnosticNode]s to convert to JSON and the corresponding
-/// JSON list to add them to.
+/// Stack containing [DiagnosticNode]s to convert to JSON and the callback to
+/// call with the JSON.
 ///
 /// Using a stack is required to process the widget tree iteratively instead of
 /// recursively.
 typedef _NodesToJsonifyStack
-    = List<(DiagnosticsNode, List<_JsonDiagnosticsNode>)>;
+    = List<(DiagnosticsNode, void Function(_JsonDiagnosticsNode))>;
 
 /// Defines diagnostics data for a [value].
 ///
@@ -1621,9 +1621,9 @@ abstract class DiagnosticsNode {
     bool fullDetails = true,
   }) {
     final _NodesToJsonifyStack childrenToJsonify =
-        <(DiagnosticsNode, List<_JsonDiagnosticsNode>)>[];
+        <(DiagnosticsNode, void Function(_JsonDiagnosticsNode))>[];
     final _NodesToJsonifyStack propertiesToJsonify =
-        <(DiagnosticsNode, List<_JsonDiagnosticsNode>)>[];
+        <(DiagnosticsNode, void Function(_JsonDiagnosticsNode))>[];
     _JsonDiagnosticsNode result = <String, Object?>{};
 
     assert(() {
@@ -1658,7 +1658,10 @@ abstract class DiagnosticsNode {
     _NodesToJsonifyStack? propertiesToJsonify,
   }) {
     while (toJsonify.isNotEmpty) {
-      final (DiagnosticsNode nextNode, List<_JsonDiagnosticsNode> jsonList) =
+      final (
+        DiagnosticsNode nextNode,
+        void Function(_JsonDiagnosticsNode) callback
+      ) =
           toJsonify.removeAt(0);
       final _JsonDiagnosticsNode nodeAsJson = nextNode._toJson(
         delegate,
@@ -1666,7 +1669,7 @@ abstract class DiagnosticsNode {
         propertiesToJsonify: propertiesToJsonify ?? toJsonify,
         fullDetails: fullDetails,
       );
-      jsonList.add(nodeAsJson);
+      callback(nodeAsJson);
     }
   }
 
@@ -1690,7 +1693,12 @@ abstract class DiagnosticsNode {
         fullDetails: fullDetails,
       );
       for (final DiagnosticsNode child in childrenNodes) {
-        childrenToJsonify.add((child, childrenJsonList));
+        childrenToJsonify.add((
+          child,
+          (_JsonDiagnosticsNode jsonChild) {
+            childrenJsonList.add(jsonChild);
+          }
+        ));
       }
     }
 
@@ -1711,8 +1719,13 @@ abstract class DiagnosticsNode {
     if (fullDetails && delegate.includeProperties) {
       final List<DiagnosticsNode> propertyNodes =
           delegate.filterProperties(getProperties(), this);
-      for (final DiagnosticsNode property in propertyNodes) {
-        propertiesToJsonify.add((property, propertiesJsonList));
+      for (final DiagnosticsNode child in propertyNodes) {
+        propertiesToJsonify.add((
+          child,
+          (_JsonDiagnosticsNode jsonProperty) {
+            propertiesJsonList.add(jsonProperty);
+          }
+        ));
       }
     }
 
