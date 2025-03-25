@@ -1610,9 +1610,11 @@ mixin WidgetInspectorService {
   /// Notify attached tools to navigate to an object's source location.
   void _sendInspectEvent(Object? object) {
     inspect(object);
+    print('INSPECTING OBJ!!!');
 
     final _Location? location = _getSelectedSummaryWidgetLocation(null);
     if (location != null) {
+      print(location.file);
       postEvent('navigate', <String, Object>{
         'fileUri': location.file, // URI file path of the location.
         'line': location.line, // 1-based line number.
