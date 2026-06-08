@@ -887,6 +887,7 @@ class _FocusScopeState extends _FocusState {
 
   @override
   Widget build(BuildContext context) {
+    print('CREATING NEW FOCUS SCOPE.');
     _focusAttachment!.reparent(parent: widget.parentNode);
     Widget result = _FocusInheritedScope(node: focusNode, child: widget.child);
     if (widget.includeSemantics) {

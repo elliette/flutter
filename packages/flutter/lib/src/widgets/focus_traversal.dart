@@ -378,6 +378,14 @@ abstract class FocusTraversalPolicy with Diagnosticable {
   @mustCallSuper
   void changedScope({FocusNode? node, FocusScopeNode? oldScope}) {}
 
+  /// This is called whenever the [FocusScopeNode.focusedChild] of an enclosing
+  /// scope changes due to the given [node] requesting focus, so that the
+  /// policy has a chance to update or invalidate any cached data.
+  ///
+  /// The default implementation does nothing.
+  @mustCallSuper
+  void changedFocusedChild(FocusNode node) {}
+
   /// Focuses the next widget in the focus scope that contains the given
   /// [currentNode].
   ///
@@ -760,10 +768,24 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   final Map<FocusScopeNode, _DirectionalPolicyData> _policyData =
       <FocusScopeNode, _DirectionalPolicyData>{};
 
+  bool _isTraversing = false;
+
   @override
   void invalidateScopeData(FocusScopeNode node) {
     super.invalidateScopeData(node);
     _policyData.remove(node);
+  }
+
+  @override
+  void changedFocusedChild(FocusNode node) {
+    super.changedFocusedChild(node);
+    if (!_isTraversing) {
+      FocusScopeNode? scope = node.nearestScope;
+      while (scope != null) {
+        _policyData.remove(scope);
+        scope = scope.enclosingScope;
+      }
+    }
   }
 
   @override
@@ -1321,39 +1343,46 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   @mustCallSuper
   @override
   bool inDirection(FocusNode currentNode, TraversalDirection direction) {
-    final FocusScopeNode nearestScope = currentNode.nearestScope!;
-    final FocusNode? focusedChild = nearestScope.focusedChild;
-    if (focusedChild == null) {
-      final FocusNode firstFocus = findFirstFocusInDirection(currentNode, direction) ?? currentNode;
-      switch (direction) {
-        case TraversalDirection.up:
-        case TraversalDirection.left:
-          requestFocusCallback(
-            firstFocus,
-            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-          );
-        case TraversalDirection.right:
-        case TraversalDirection.down:
-          requestFocusCallback(
-            firstFocus,
-            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-          );
+    final bool previousIsTraversing = _isTraversing;
+    _isTraversing = true;
+    try {
+      final FocusScopeNode nearestScope = currentNode.nearestScope!;
+      final FocusNode? focusedChild = nearestScope.focusedChild;
+      if (focusedChild == null) {
+        final FocusNode firstFocus =
+            findFirstFocusInDirection(currentNode, direction) ?? currentNode;
+        switch (direction) {
+          case TraversalDirection.up:
+          case TraversalDirection.left:
+            requestFocusCallback(
+              firstFocus,
+              alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+            );
+          case TraversalDirection.right:
+          case TraversalDirection.down:
+            requestFocusCallback(
+              firstFocus,
+              alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+            );
+        }
+        return true;
       }
-      return true;
+      if (_popPolicyDataIfNeeded(direction, nearestScope, focusedChild)) {
+        return true;
+      }
+      final FocusNode? found = _findNextFocusInDirection(
+        focusedChild,
+        nearestScope.traversalDescendants,
+        direction,
+      );
+      if (found != null) {
+        _pushPolicyData(direction, nearestScope, focusedChild);
+        return _requestTraversalFocusInDirection(currentNode, found, nearestScope, direction);
+      }
+      return _onEdgeForDirection(currentNode, focusedChild, direction);
+    } finally {
+      _isTraversing = previousIsTraversing;
     }
-    if (_popPolicyDataIfNeeded(direction, nearestScope, focusedChild)) {
-      return true;
-    }
-    final FocusNode? found = _findNextFocusInDirection(
-      focusedChild,
-      nearestScope.traversalDescendants,
-      direction,
-    );
-    if (found != null) {
-      _pushPolicyData(direction, nearestScope, focusedChild);
-      return _requestTraversalFocusInDirection(currentNode, found, nearestScope, direction);
-    }
-    return _onEdgeForDirection(currentNode, focusedChild, direction);
   }
 }
 
@@ -2111,6 +2140,16 @@ class FocusTraversalGroup extends StatefulWidget {
     return null;
   }
 
+  static void invalidatePolicyDataFor(FocusNode node) {
+    FocusNode? current = node;
+    while (current != null) {
+      if (current is _FocusTraversalGroupNode) {
+        current.policy.changedFocusedChild(node);
+      }
+      current = current.parent;
+    }
+  }
+
   /// Returns the [FocusTraversalPolicy] that applies to the [FocusNode] of the
   /// nearest ancestor [Focus] widget, given a [BuildContext].
   ///
@@ -2418,6 +2457,8 @@ class DirectionalFocusAction extends Action<DirectionalFocusIntent> {
   final bool _isForTextField;
   @override
   void invoke(DirectionalFocusIntent intent) {
+    print('Invoking Directional Focus Action:');
+    print(intent.direction);
     if (!intent.ignoreTextFields || !_isForTextField) {
       primaryFocus!.focusInDirection(intent.direction);
     }

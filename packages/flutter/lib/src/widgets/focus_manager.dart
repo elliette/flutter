@@ -1181,6 +1181,8 @@ class FocusNode with DiagnosticableTreeMixin, ChangeNotifier {
       return;
     }
     _setAsFocusedChildForScope();
+    print('invalidating policy data for $debugLabel');
+    FocusTraversalGroup.invalidatePolicyDataFor(this);
     if (hasPrimaryFocus &&
         (_manager!._markedForFocus == null || _manager!._markedForFocus == this)) {
       return;
@@ -1457,6 +1459,7 @@ class FocusScopeNode extends FocusNode {
       scope._doRequestFocus(findFirstFocus: true);
     } else {
       scope._setAsFocusedChildForScope();
+      FocusTraversalGroup.invalidatePolicyDataFor(scope);
     }
   }
 
@@ -1507,6 +1510,7 @@ class FocusScopeNode extends FocusNode {
     if (!findFirstFocus || focusedChild == null) {
       if (canRequestFocus) {
         _setAsFocusedChildForScope();
+        FocusTraversalGroup.invalidatePolicyDataFor(this);
         _markNextFocus(this);
       }
       return;
@@ -2221,6 +2225,7 @@ class _HighlightModeManager {
       }
     }
 
+    // print('handleKeyMessage: primaryFocus=${FocusManager.instance.primaryFocus}, message=$message');
     assert(_focusDebug(() => 'Received key event $message'));
     if (FocusManager.instance.primaryFocus == null) {
       assert(_focusDebug(() => 'No primary focus for key event, ignored: $message'));
