@@ -1147,6 +1147,7 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
     FocusNode focusedChild,
   ) {
     final _DirectionalPolicyData? policyData = _policyData[nearestScope];
+    _printPolicyData(policyData);
     if (policyData != null &&
         policyData.history.isNotEmpty &&
         policyData.history.first.direction != direction) {
@@ -1215,6 +1216,16 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
     return false;
   }
 
+  void _printPolicyData(_DirectionalPolicyData? policyData) {
+    if (policyData != null) {
+      var policyString = '';
+      for (final _DirectionalPolicyDataEntry entry in policyData.history) {
+        policyString += '${entry.node.debugLabel} -> ';
+      }
+      print('$policyString end');
+    }
+  }
+
   void _pushPolicyData(
     TraversalDirection direction,
     FocusScopeNode nearestScope,
@@ -1224,10 +1235,12 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
     final newEntry = _DirectionalPolicyDataEntry(node: focusedChild, direction: direction);
     if (policyData != null) {
       policyData.history.add(newEntry);
+      _printPolicyData(policyData);
     } else {
       _policyData[nearestScope] = _DirectionalPolicyData(
         history: <_DirectionalPolicyDataEntry>[newEntry],
       );
+      _printPolicyData(policyData);
     }
   }
 
