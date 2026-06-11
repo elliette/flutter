@@ -768,8 +768,6 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   final Map<FocusScopeNode, _DirectionalPolicyData> _policyData =
       <FocusScopeNode, _DirectionalPolicyData>{};
 
-  bool _isTraversing = false;
-
   @override
   void invalidateScopeData(FocusScopeNode node) {
     super.invalidateScopeData(node);
@@ -779,27 +777,10 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   @override
   void changedFocusedChild(FocusNode node) {
     super.changedFocusedChild(node);
-    if (!_isTraversing) {
-      FocusScopeNode? scope = node.nearestScope;
-      while (scope != null) {
-        print('NOT TRAVERSING, THEREFORE REMOVE POLICY FOR ${node.debugLabel}:');
-        _printPolicyData(_policyData[scope]);
-        print(_policyData);
-        _policyData.remove(scope);
-        scope = scope.enclosingScope;
-      }
-    } else {
-      print('TRAVERSING FOR ${node.debugLabel}, NO OP.');
-    }
-  }
-
-  void _printPolicyData(_DirectionalPolicyData? policyData) {
-    if (policyData != null) {
-      var policyString = '';
-      for (final _DirectionalPolicyDataEntry entry in policyData.history) {
-        policyString += '${entry.node.debugLabel} -> ';
-      }
-      print('$policyString end');
+    FocusScopeNode? scope = node.nearestScope;
+    while (scope != null) {
+      _policyData.remove(scope);
+      scope = scope.enclosingScope;
     }
   }
 
@@ -1368,11 +1349,9 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   @mustCallSuper
   @override
   bool inDirection(FocusNode currentNode, TraversalDirection direction) {
-    final bool previousIsTraversing = _isTraversing;
-    _isTraversing = true;
-    print('traversing? $_isTraversing');
-    print('IN DIRECTION: ${direction.name} for ${currentNode.debugLabel}');
-
+    final _FocusTraversalGroupNode? groupNode = FocusTraversalGroup._getGroupNode(currentNode);
+    final bool wasTraversing = groupNode?.isTraversing ?? false;
+    groupNode?.isTraversing = true;
     try {
       final FocusScopeNode nearestScope = currentNode.nearestScope!;
       final FocusNode? focusedChild = nearestScope.focusedChild;
@@ -1409,7 +1388,7 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
       }
       return _onEdgeForDirection(currentNode, focusedChild, direction);
     } finally {
-      _isTraversing = previousIsTraversing;
+      groupNode?.isTraversing = wasTraversing;
     }
   }
 }
@@ -2239,18 +2218,13 @@ class FocusTraversalGroup extends StatefulWidget {
   }
 
   static void invalidatePolicyDataFor(FocusNode node) {
-    print('------------start---------------------');
-    print('invalidating policy data for ${node.debugLabel}');
-    // print(StackTrace.current);
     FocusNode? current = node;
     while (current != null) {
-      if (current is _FocusTraversalGroupNode) {
-        print('changing focused child for ${node.debugLabel}');
+      if (current is _FocusTraversalGroupNode && !current.isTraversing) {
         current.policy.changedFocusedChild(node);
       }
       current = current.parent;
     }
-    print('------------end---------------------');
   }
 
   @override
@@ -2274,6 +2248,7 @@ class _FocusTraversalGroupNode extends FocusNode {
   }
 
   FocusTraversalPolicy policy;
+  bool isTraversing = false;
 }
 
 class _FocusTraversalGroupState extends State<FocusTraversalGroup> {
