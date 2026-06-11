@@ -768,6 +768,8 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   final Map<FocusScopeNode, _DirectionalPolicyData> _policyData =
       <FocusScopeNode, _DirectionalPolicyData>{};
 
+  bool _isTraversing = false;
+
   @override
   void invalidateScopeData(FocusScopeNode node) {
     super.invalidateScopeData(node);
@@ -777,10 +779,12 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   @override
   void changedFocusedChild(FocusNode node) {
     super.changedFocusedChild(node);
-    FocusScopeNode? scope = node.nearestScope;
-    while (scope != null) {
-      _policyData.remove(scope);
-      scope = scope.enclosingScope;
+    if (!_isTraversing) {
+      FocusScopeNode? scope = node.nearestScope;
+      while (scope != null) {
+        _policyData.remove(scope);
+        scope = scope.enclosingScope;
+      }
     }
   }
 
@@ -1352,6 +1356,8 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
     final _FocusTraversalGroupNode? groupNode = FocusTraversalGroup._getGroupNode(currentNode);
     final bool wasTraversing = groupNode?.isTraversing ?? false;
     groupNode?.isTraversing = true;
+  
+    // _isTraversing = true;
     try {
       final FocusScopeNode nearestScope = currentNode.nearestScope!;
       final FocusNode? focusedChild = nearestScope.focusedChild;
@@ -2215,16 +2221,6 @@ class FocusTraversalGroup extends StatefulWidget {
       return null;
     }
     return FocusTraversalGroup.maybeOfNode(node);
-  }
-
-  static void invalidatePolicyDataFor(FocusNode node) {
-    FocusNode? current = node;
-    while (current != null) {
-      if (current is _FocusTraversalGroupNode && !current.isTraversing) {
-        current.policy.changedFocusedChild(node);
-      }
-      current = current.parent;
-    }
   }
 
   @override

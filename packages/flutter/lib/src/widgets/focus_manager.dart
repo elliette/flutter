@@ -1181,7 +1181,7 @@ class FocusNode with DiagnosticableTreeMixin, ChangeNotifier {
       return;
     }
     _setAsFocusedChildForScope();
-    FocusTraversalGroup.invalidatePolicyDataFor(this);
+    _maybeInvalidatePolicyData();
     if (hasPrimaryFocus &&
         (_manager!._markedForFocus == null || _manager!._markedForFocus == this)) {
       return;
@@ -1189,6 +1189,17 @@ class FocusNode with DiagnosticableTreeMixin, ChangeNotifier {
     _hasKeyboardToken = true;
     assert(_focusDebug(() => 'Node requesting focus: $this'));
     _markNextFocus(this);
+  }
+
+  void _maybeInvalidatePolicyData() {
+    FocusNode? current = this;
+    while (current != null) {
+      final FocusTraversalPolicy? policy = FocusTraversalGroup.maybeOfNode(current);
+      if (policy != null) {
+        policy.changedFocusedChild(current);
+      }
+      current = current.parent;
+    }
   }
 
   // If set to true, the node will request focus on this node the next time
@@ -1458,7 +1469,7 @@ class FocusScopeNode extends FocusNode {
       scope._doRequestFocus(findFirstFocus: true);
     } else {
       scope._setAsFocusedChildForScope();
-      FocusTraversalGroup.invalidatePolicyDataFor(this);
+      _maybeInvalidatePolicyData();
     }
   }
 
@@ -1509,7 +1520,7 @@ class FocusScopeNode extends FocusNode {
     if (!findFirstFocus || focusedChild == null) {
       if (canRequestFocus) {
         _setAsFocusedChildForScope();
-        FocusTraversalGroup.invalidatePolicyDataFor(this);
+        _maybeInvalidatePolicyData();
         _markNextFocus(this);
       }
       return;
