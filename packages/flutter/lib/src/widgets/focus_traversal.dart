@@ -378,6 +378,14 @@ abstract class FocusTraversalPolicy with Diagnosticable {
   @mustCallSuper
   void changedScope({FocusNode? node, FocusScopeNode? oldScope}) {}
 
+  /// This is called whenever the [FocusScopeNode.focusedChild] of an enclosing
+  /// scope changes due to the given [node] requesting focus, so that the
+  /// policy has a chance to update or invalidate any cached data.
+  ///
+  /// The default implementation does nothing.
+  @mustCallSuper
+  void changedFocusedChild(FocusNode node) {}
+
   /// Focuses the next widget in the focus scope that contains the given
   /// [currentNode].
   ///
@@ -760,10 +768,39 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   final Map<FocusScopeNode, _DirectionalPolicyData> _policyData =
       <FocusScopeNode, _DirectionalPolicyData>{};
 
+  bool _isTraversing = false;
+
   @override
   void invalidateScopeData(FocusScopeNode node) {
     super.invalidateScopeData(node);
     _policyData.remove(node);
+  }
+
+  @override
+  void changedFocusedChild(FocusNode node) {
+    super.changedFocusedChild(node);
+    if (!_isTraversing) {
+      FocusScopeNode? scope = node.nearestScope;
+      while (scope != null) {
+        print('NOT TRAVERSING, THEREFORE REMOVE POLICY FOR ${node.debugLabel}:');
+        _printPolicyData(_policyData[scope]);
+        print(_policyData);
+        _policyData.remove(scope);
+        scope = scope.enclosingScope;
+      }
+    } else {
+      print('TRAVERSING FOR ${node.debugLabel}, NO OP.');
+    }
+  }
+
+  void _printPolicyData(_DirectionalPolicyData? policyData) {
+    if (policyData != null) {
+      var policyString = '';
+      for (final _DirectionalPolicyDataEntry entry in policyData.history) {
+        policyString += '${entry.node.debugLabel} -> ';
+      }
+      print('$policyString end');
+    }
   }
 
   @override
@@ -1209,6 +1246,16 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
     }
   }
 
+  // void _printPolicyData(_DirectionalPolicyData? policyData) {
+  //   if (policyData != null) {
+  //     var policyString = '';
+  //     for (final _DirectionalPolicyDataEntry entry in policyData.history) {
+  //       policyString += '${entry.node.debugLabel} -> ';
+  //     }
+  //     print('$policyString end');
+  //   }
+  // }
+
   bool _requestTraversalFocusInDirection(
     FocusNode currentNode,
     FocusNode node,
@@ -1321,39 +1368,49 @@ mixin DirectionalFocusTraversalPolicyMixin on FocusTraversalPolicy {
   @mustCallSuper
   @override
   bool inDirection(FocusNode currentNode, TraversalDirection direction) {
-    final FocusScopeNode nearestScope = currentNode.nearestScope!;
-    final FocusNode? focusedChild = nearestScope.focusedChild;
-    if (focusedChild == null) {
-      final FocusNode firstFocus = findFirstFocusInDirection(currentNode, direction) ?? currentNode;
-      switch (direction) {
-        case TraversalDirection.up:
-        case TraversalDirection.left:
-          requestFocusCallback(
-            firstFocus,
-            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-          );
-        case TraversalDirection.right:
-        case TraversalDirection.down:
-          requestFocusCallback(
-            firstFocus,
-            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-          );
+    final bool previousIsTraversing = _isTraversing;
+    _isTraversing = true;
+    print('traversing? $_isTraversing');
+    print('IN DIRECTION: ${direction.name} for ${currentNode.debugLabel}');
+
+    try {
+      final FocusScopeNode nearestScope = currentNode.nearestScope!;
+      final FocusNode? focusedChild = nearestScope.focusedChild;
+      if (focusedChild == null) {
+        final FocusNode firstFocus =
+            findFirstFocusInDirection(currentNode, direction) ?? currentNode;
+        switch (direction) {
+          case TraversalDirection.up:
+          case TraversalDirection.left:
+            requestFocusCallback(
+              firstFocus,
+              alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+            );
+          case TraversalDirection.right:
+          case TraversalDirection.down:
+            requestFocusCallback(
+              firstFocus,
+              alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+            );
+        }
+        return true;
       }
-      return true;
+      if (_popPolicyDataIfNeeded(direction, nearestScope, focusedChild)) {
+        return true;
+      }
+      final FocusNode? found = _findNextFocusInDirection(
+        focusedChild,
+        nearestScope.traversalDescendants,
+        direction,
+      );
+      if (found != null) {
+        _pushPolicyData(direction, nearestScope, focusedChild);
+        return _requestTraversalFocusInDirection(currentNode, found, nearestScope, direction);
+      }
+      return _onEdgeForDirection(currentNode, focusedChild, direction);
+    } finally {
+      _isTraversing = previousIsTraversing;
     }
-    if (_popPolicyDataIfNeeded(direction, nearestScope, focusedChild)) {
-      return true;
-    }
-    final FocusNode? found = _findNextFocusInDirection(
-      focusedChild,
-      nearestScope.traversalDescendants,
-      direction,
-    );
-    if (found != null) {
-      _pushPolicyData(direction, nearestScope, focusedChild);
-      return _requestTraversalFocusInDirection(currentNode, found, nearestScope, direction);
-    }
-    return _onEdgeForDirection(currentNode, focusedChild, direction);
   }
 }
 
@@ -2179,6 +2236,21 @@ class FocusTraversalGroup extends StatefulWidget {
       return null;
     }
     return FocusTraversalGroup.maybeOfNode(node);
+  }
+
+  static void invalidatePolicyDataFor(FocusNode node) {
+    print('------------start---------------------');
+    print('invalidating policy data for ${node.debugLabel}');
+    // print(StackTrace.current);
+    FocusNode? current = node;
+    while (current != null) {
+      if (current is _FocusTraversalGroupNode) {
+        print('changing focused child for ${node.debugLabel}');
+        current.policy.changedFocusedChild(node);
+      }
+      current = current.parent;
+    }
+    print('------------end---------------------');
   }
 
   @override

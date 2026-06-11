@@ -1181,6 +1181,7 @@ class FocusNode with DiagnosticableTreeMixin, ChangeNotifier {
       return;
     }
     _setAsFocusedChildForScope();
+    FocusTraversalGroup.invalidatePolicyDataFor(this);
     if (hasPrimaryFocus &&
         (_manager!._markedForFocus == null || _manager!._markedForFocus == this)) {
       return;
@@ -1457,6 +1458,7 @@ class FocusScopeNode extends FocusNode {
       scope._doRequestFocus(findFirstFocus: true);
     } else {
       scope._setAsFocusedChildForScope();
+      FocusTraversalGroup.invalidatePolicyDataFor(this);
     }
   }
 
@@ -1507,6 +1509,7 @@ class FocusScopeNode extends FocusNode {
     if (!findFirstFocus || focusedChild == null) {
       if (canRequestFocus) {
         _setAsFocusedChildForScope();
+        FocusTraversalGroup.invalidatePolicyDataFor(this);
         _markNextFocus(this);
       }
       return;
