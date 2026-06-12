@@ -1923,7 +1923,10 @@ void main() {
       clear();
     });
 
-    testWidgets('Directional focus history is cleared on tap', (WidgetTester tester) async {
+    // Regression test for https://github.com/flutter/flutter/issues/186154.
+    testWidgets('Directional focus history is cleared on explicit focus request', (
+      WidgetTester tester,
+    ) async {
       var focus = List<bool?>.generate(5, (int _) => null);
       final nodes = List<FocusNode>.generate(
         5,
@@ -1974,7 +1977,7 @@ void main() {
       await tester.pump();
       clear();
 
-      // Move down twice.
+      // Move down three times.
       expect(scope.focusInDirection(TraversalDirection.down), isTrue);
       await tester.pump();
       expect(focus, orderedEquals(<bool?>[false, true, null, null, null]));
@@ -1996,11 +1999,13 @@ void main() {
       expect(focus, orderedEquals(<bool?>[null, true, null, false, null]));
       clear();
 
+      // Move down once.
       expect(scope.focusInDirection(TraversalDirection.down), isTrue);
       await tester.pump();
       expect(focus, orderedEquals(<bool?>[null, false, true, null, null]));
       clear();
 
+      // Move up twice.
       expect(scope.focusInDirection(TraversalDirection.up), isTrue);
       await tester.pump();
       expect(focus, orderedEquals(<bool?>[null, true, false, null, null]));
