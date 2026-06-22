@@ -1806,7 +1806,7 @@ void main() {
     });
 
     testWidgets('Directional focus avoids hysteresis.', (WidgetTester tester) async {
-      var focus = List<bool?>.generate(6, (int _) => null);
+      List<bool?> focus = _createFocusTracker(6);
       final nodes = List<FocusNode>.generate(
         6,
         (int index) => FocusNode(debugLabel: 'Node $index'),
@@ -1859,7 +1859,7 @@ void main() {
       );
 
       void clear() {
-        focus = List<bool?>.generate(focus.length, (int _) => null);
+        focus = _createFocusTracker(focus.length);
       }
 
       final FocusNode scope = nodes[0].enclosingScope!;
@@ -1923,11 +1923,11 @@ void main() {
       clear();
     });
 
-    // Regression test for https://github.com/flutter/flutter/issues/186154.
+    // Regression test for https://github.com/flutter/flutter/issues/85941.
     testWidgets('Directional focus history is cleared on explicit focus request', (
       WidgetTester tester,
     ) async {
-      var focus = List<bool?>.generate(5, (int _) => null);
+      List<bool?> focus = _createFocusTracker(5);
       final nodes = List<FocusNode>.generate(
         5,
         (int index) => FocusNode(debugLabel: 'Node $index'),
@@ -1969,7 +1969,7 @@ void main() {
       );
 
       void clear() {
-        focus = List<bool?>.generate(focus.length, (int _) => null);
+        focus = _createFocusTracker(focus.length);
       }
 
       final FocusNode scope = nodes[0].enclosingScope!;
@@ -2022,7 +2022,7 @@ void main() {
     ) async {
       const cols = 3;
       const rows = 3;
-      var focus = List<bool?>.generate(rows * cols, (int _) => null);
+      List<bool?> focus = _createFocusTracker(rows * cols);
       final nodes = List<FocusNode>.generate(
         rows * cols,
         (int index) => FocusNode(debugLabel: 'Node $index'),
@@ -2084,7 +2084,7 @@ void main() {
       );
 
       void clear() {
-        focus = List<bool?>.generate(focus.length, (int _) => null);
+        focus = _createFocusTracker(focus.length);
       }
 
       final FocusNode scope = nodes[0].enclosingScope!;
@@ -2155,7 +2155,7 @@ void main() {
       WidgetTester tester,
     ) async {
       const rows = 4;
-      var focus = List<bool?>.generate(rows, (int _) => null);
+      List<bool?> focus = _createFocusTracker(rows);
       final nodes = List<FocusNode>.generate(
         rows,
         (int index) => FocusNode(debugLabel: 'Node $index'),
@@ -2209,7 +2209,7 @@ void main() {
       );
 
       void clear() {
-        focus = List<bool?>.generate(focus.length, (int _) => null);
+        focus = _createFocusTracker(focus.length);
       }
 
       final FocusNode scope = nodes[0].enclosingScope!;
@@ -2246,7 +2246,7 @@ void main() {
       WidgetTester tester,
     ) async {
       const cols = 4;
-      var focus = List<bool?>.generate(cols, (int _) => null);
+      List<bool?> focus = _createFocusTracker(cols);
       final nodes = List<FocusNode>.generate(
         cols,
         (int index) => FocusNode(debugLabel: 'Node $index'),
@@ -2300,7 +2300,7 @@ void main() {
       );
 
       void clear() {
-        focus = List<bool?>.generate(focus.length, (int _) => null);
+        focus = _createFocusTracker(focus.length);
       }
 
       final FocusNode scope = nodes[0].enclosingScope!;
@@ -3970,7 +3970,7 @@ void main() {
   });
 
   testWidgets('Edge cases for inDirection', (WidgetTester tester) async {
-    var focus = List<bool?>.generate(6, (int _) => null);
+    List<bool?> focus = _createFocusTracker(6);
     final nodes = List<FocusNode>.generate(6, (int index) => FocusNode(debugLabel: 'Node $index'));
     final childScope = FocusScopeNode(debugLabel: 'Child Scope');
     addTearDown(() {
@@ -4041,7 +4041,7 @@ void main() {
     await pumpApp();
 
     void clear() {
-      focus = List<bool?>.generate(focus.length, (int _) => null);
+      focus = _createFocusTracker(focus.length);
     }
 
     Future<void> resetTo(int index) async {
@@ -4237,3 +4237,6 @@ class SkipAllButFirstAndLastPolicy extends FocusTraversalPolicy
     ];
   }
 }
+
+/// Creates a list of [length] to track focus changes during the test suite.
+List<bool?> _createFocusTracker(int length) => List<bool?>.generate(length, (int index) => null);
