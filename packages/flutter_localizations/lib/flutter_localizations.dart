@@ -11,3 +11,6 @@ export 'src/l10n/generated_material_localizations.dart';
 export 'src/l10n/generated_widgets_localizations.dart';
 export 'src/material_localizations.dart';
 export 'src/widgets_localizations.dart';
+
+export 'package:flutter/material.dart' show MaterialLocalizations, DefaultMaterialLocalizations;
+export 'package:flutter/cupertino.dart' show CupertinoLocalizations, DefaultCupertinoLocalizations, DatePickerDateOrder, DatePickerDateTimeOrder;
